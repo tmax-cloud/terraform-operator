@@ -1,0 +1,20 @@
+# permissions for end users to view securities.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: security-viewer-role
+rules:
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - securities
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - securities/status
+  verbs:
+  - get

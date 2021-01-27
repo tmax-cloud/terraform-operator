@@ -1,0 +1,23 @@
+domain: tmax.io
+layout: go.kubebuilder.io/v2
+projectName: terraform-operator
+repo: github.com/tmax-cloud/terraform-operator
+resources:
+- group: terraform
+  kind: Provider
+  version: v1alpha1
+- group: terraform
+  kind: Instance
+  version: v1alpha1
+- group: terraform
+  kind: Network
+  version: v1alpha1
+- group: terraform
+  kind: Storage
+  version: v1alpha1
+- group: terraform
+  kind: Security
+  version: v1alpha1
+version: 3-alpha
+plugins:
+  go.sdk.operatorframework.io/v2-alpha: {}

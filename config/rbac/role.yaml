@@ -1,0 +1,145 @@
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - instances
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - instances/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - instances/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - networks
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - networks/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - networks/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - providers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - providers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - providers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - securities
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - securities/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - storages
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - storages/status
+  verbs:
+  - get
+  - patch
+  - update
