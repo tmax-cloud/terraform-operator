@@ -48,6 +48,7 @@ type ProviderReconciler struct {
 // +kubebuilder:rbac:groups=terraform.tmax.io,resources=providers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=terraform.tmax.io,resources=providers/finalizers,verbs=update
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;
 
 func (r *ProviderReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {

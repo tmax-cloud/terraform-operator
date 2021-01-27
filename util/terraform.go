@@ -36,13 +36,10 @@ type TerraVars struct {
 	InstanceName string
 	InstanceType string
 	AMI          string
-	Count        int
 	KeyName      string
 }
 
-func ExecuteTerraform(input TerraVars, resourceType string) error {
-	count := 1
-
+func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error {
 	var platform *terranova.Platform
 	var err error
 
@@ -135,9 +132,9 @@ func ExecuteTerraform(input TerraVars, resourceType string) error {
 			return err
 		}
 	*/
-	terminate := (count == 0)
+	//terminate := (count == 0)
 
-	if err := platform.Apply(terminate); err != nil {
+	if err := platform.Apply(destroy); err != nil {
 		return err
 	}
 	return nil

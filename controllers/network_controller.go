@@ -34,6 +34,7 @@ import (
 
 	//"os/exec"
 	"fmt"
+	"reflect"
 
 	"github.com/tmax-cloud/terraform-operator/util"
 )
@@ -63,14 +64,36 @@ func (r *NetworkReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			// Return and don't requeue
 			log.Info("Network resource not found. Ignoring since object must be deleted")
 
+			cm := &corev1.ConfigMap{}
+			err = r.Get(ctx, req.NamespacedName, cm)
+			if err != nil {
+				if errors.IsNotFound(err) {
+					// Request object not found, could have been deleted after reconcile request.
+					// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+					// Return and don't requeue
+					log.Info("ConfigMap resource not found. Ignoring since object must be deleted")
+					return ctrl.Result{}, nil
+				}
+				// Error reading the object - requeue the request.
+				log.Error(err, "Failed to get ConfigMap")
+				return ctrl.Result{}, err
+			}
+
+			input := r.configmapToVars(cm)
+
 			// Destroy the Provisioned Resources for Deleted Object (Network)
-			isDestroy := true
-			err = util.ExecuteTerraform_CLI(util.HCL_DIR, isDestroy)
+			destroy := true
+			//err = util.ExecuteTerraform_CLI(util.HCL_DIR, isDestroy)
+			err = util.ExecuteTerraform(input, "AWS_NETWORK", destroy)
 			if err != nil {
 				log.Error(err, "Terraform Destroy Error")
 				return ctrl.Result{}, err
 			}
-			///////////////////////////////////////////////////////////////////
+			err = r.Delete(ctx, cm)
+			if err != nil {
+				log.Error(err, "Failed to delete new Confgimap", "Configmap.Namespace", cm.Namespace, "Configmap.Name", cm.Name)
+				return ctrl.Result{}, err
+			}
 
 			return ctrl.Result{}, nil
 		}
@@ -222,7 +245,27 @@ func (r *NetworkReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			}
 		}
 	*/
-	err = util.ExecuteTerraform(input, "AWS_NETWORK")
+	// Check if the configmap already exists, if not create a new one
+	cmList := &corev1.ConfigMap{}
+	err = r.Get(ctx, types.NamespacedName{Name: network.Name, Namespace: network.Namespace}, cmList)
+	if err != nil && errors.IsNotFound(err) {
+		// Define a new ConfigMap
+		cm := r.configmapForNetwork(network, input)
+		log.Info("Creating a new Configmap", "Configmap.Namespace", cm.Namespace, "Configmap.Name", cm.Name)
+		err = r.Create(ctx, cm)
+		if err != nil {
+			log.Error(err, "Failed to create new Confgimap", "Configmap.Namespace", cm.Namespace, "Configmap.Name", cm.Name)
+			return ctrl.Result{}, err
+		}
+		// Configmap created successfully - return and requeue
+		return ctrl.Result{Requeue: true}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get Configmap")
+		return ctrl.Result{}, err
+	}
+
+	// Provision the Network Resource by Terraform
+	err = util.ExecuteTerraform(input, "AWS_NETWORK", false)
 
 	if err != nil {
 		provider.Status.Phase = "error"
@@ -283,6 +326,69 @@ func (r *NetworkReconciler) deploymentForNetwork(m *terraformv1alpha1.Network) *
 	// Set Provider instance as the owner and controller
 	ctrl.SetControllerReference(m, dep, r.Scheme)
 	return dep
+}
+
+// configmapForNetwork returns a network ConfigMap object
+func (r *NetworkReconciler) configmapForNetwork(m *terraformv1alpha1.Network, input util.TerraVars) *corev1.ConfigMap {
+	configMapData := make(map[string]string, 0)
+
+	e := reflect.ValueOf(&input).Elem()
+
+	for i := 0; i < e.NumField(); i++ {
+		varName := e.Type().Field(i).Name
+		//varType := e.Type().Field(i).Type
+		varValue := fmt.Sprintf("%v", e.Field(i).Interface())
+
+		configMapData[varName] = varValue
+	}
+	/*
+		configMapData["ProviderName"] = input.ProviderName
+		configMapData["Cloud"] = input.Cloud
+		configMapData["AccessKey"] = input.AccessKey
+		configMapData["SecretKey"] = input.SecretKey
+		configMapData["Region"] = input.Region
+		configMapData["NetworkName"] = input.NetworkName
+		configMapData["VPCCIDR"] = input.VPCCIDR
+		configMapData["SubnetCIDR"] = input.SubnetCIDR
+		configMapData["RouteCIDR"] = input.RouteCIDR
+		configMapData["InstanceName"] = input.InstanceName
+		configMapData["InstanceType"] = input.InstanceType
+		configMapData["AMI"] = input.AMI
+		configMapData["KeyName"] = input.KeyName
+	*/
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      m.Name,
+			Namespace: m.Namespace,
+		},
+		Data: configMapData,
+	}
+	return cm
+}
+
+// configmapForNetwork returns a network ConfigMap object
+func (r *NetworkReconciler) configmapToVars(cm *corev1.ConfigMap) util.TerraVars {
+
+	configMapData := cm.Data
+
+	output := util.TerraVars{
+		ProviderName: configMapData["ProviderName"],
+		Cloud:        configMapData["Cloud"],
+		AccessKey:    configMapData["AccessKey"],
+		SecretKey:    configMapData["SecretKey"],
+		Region:       configMapData["Region"],
+
+		NetworkName: configMapData["NetworkName"],
+		VPCCIDR:     configMapData["VPCCIDR"],
+		SubnetCIDR:  configMapData["SubnetCIDR"],
+		RouteCIDR:   configMapData["RouteCIDR"],
+		//InstanceName string
+		//InstanceType string
+		//AMI          string
+		//KeyName      string
+	}
+
+	return output
 }
 
 // labelsForNetwork returns the labels for selecting the resources

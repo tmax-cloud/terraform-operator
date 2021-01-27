@@ -117,7 +117,6 @@ func (r *InstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	input.InstanceName = instance.Name
 	input.InstanceType = instance.Spec.Type
 	input.AMI = instance.Spec.Image
-	input.Count = 1
 	input.KeyName = "aws-key"
 
 	instanceNetwork := instance.Spec.Network
@@ -270,7 +269,8 @@ func (r *InstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 	*/
 
-	err = util.ExecuteTerraform(input, "AWS_INSTANCE")
+	// Provision the Network Resource by Terraform
+	err = util.ExecuteTerraform(input, "AWS_INSTANCE", false)
 	if err != nil {
 		provider.Status.Phase = "error"
 		tErr := r.Status().Update(ctx, instance)
