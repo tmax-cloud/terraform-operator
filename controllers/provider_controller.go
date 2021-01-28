@@ -33,8 +33,6 @@ import (
 	terraformv1alpha1 "github.com/tmax-cloud/terraform-operator/api/v1alpha1"
 
 	"fmt"
-
-	"github.com/tmax-cloud/terraform-operator/util"
 )
 
 // ProviderReconciler reconciles a Provider object
@@ -64,16 +62,6 @@ func (r *ProviderReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			log.Info("Provider resource not found. Ignoring since object must be deleted")
-
-			// Destroy the Provisioned Resources for Deleted Object (Provider)
-			isDestroy := true
-			err = util.ExecuteTerraform_CLI(util.HCL_DIR, isDestroy)
-			if err != nil {
-				log.Error(err, "Terraform Destroy Error")
-				return ctrl.Result{}, err
-			}
-			///////////////////////////////////////////////////////////////////
-
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.

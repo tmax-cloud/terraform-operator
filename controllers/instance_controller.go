@@ -17,6 +17,8 @@ limitations under the License.
 package controllers
 
 import (
+	"reflect"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -63,14 +65,37 @@ func (r *InstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			// Return and don't requeue
 			log.Info("Instance resource not found. Ignoring since object must be deleted")
 
-			// Destroy the Provisioned Resources for Deleted Object (Instance)
-			isDestroy := true
-			err = util.ExecuteTerraform_CLI(util.HCL_DIR, isDestroy)
+			cm := &corev1.ConfigMap{}
+			err = r.Get(ctx, req.NamespacedName, cm)
+			if err != nil {
+				if errors.IsNotFound(err) {
+					// Request object not found, could have been deleted after reconcile request.
+					// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+					// Return and don't requeue
+					log.Info("ConfigMap resource not found. Ignoring since object must be deleted")
+					return ctrl.Result{}, nil
+				}
+				// Error reading the object - requeue the request.
+				log.Error(err, "Failed to get ConfigMap")
+				return ctrl.Result{}, err
+			}
+
+			input := r.configmapToVars(cm)
+
+			// Destroy the Provisioned Resources for Deleted Object (Network)
+			destroy := true
+			//err = util.ExecuteTerraform_CLI(util.HCL_DIR, isDestroy)
+			err = util.ExecuteTerraform(input, "AWS_INSTANCE", destroy)
 			if err != nil {
 				log.Error(err, "Terraform Destroy Error")
 				return ctrl.Result{}, err
 			}
-			///////////////////////////////////////////////////////////////////
+
+			err = r.Delete(ctx, cm)
+			if err != nil {
+				log.Error(err, "Failed to delete new Confgimap", "Configmap.Namespace", cm.Namespace, "Configmap.Name", cm.Name)
+				return ctrl.Result{}, err
+			}
 
 			return ctrl.Result{}, nil
 		}
@@ -269,6 +294,25 @@ func (r *InstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 	*/
 
+	// Check if the configmap already exists, if not create a new one
+	cmList := &corev1.ConfigMap{}
+	err = r.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, cmList)
+	if err != nil && errors.IsNotFound(err) {
+		// Define a new ConfigMap
+		cm := r.configmapForInstance(instance, input)
+		log.Info("Creating a new Configmap", "Configmap.Namespace", cm.Namespace, "Configmap.Name", cm.Name)
+		err = r.Create(ctx, cm)
+		if err != nil {
+			log.Error(err, "Failed to create new Confgimap", "Configmap.Namespace", cm.Namespace, "Configmap.Name", cm.Name)
+			return ctrl.Result{}, err
+		}
+		// Configmap created successfully - return and requeue
+		return ctrl.Result{Requeue: true}, nil
+	} else if err != nil {
+		log.Error(err, "Failed to get Configmap")
+		return ctrl.Result{}, err
+	}
+
 	// Provision the Network Resource by Terraform
 	err = util.ExecuteTerraform(input, "AWS_INSTANCE", false)
 	if err != nil {
@@ -329,6 +373,55 @@ func (r *InstanceReconciler) deploymentForInstance(m *terraformv1alpha1.Instance
 	// Set Provider instance as the owner and controller
 	ctrl.SetControllerReference(m, dep, r.Scheme)
 	return dep
+}
+
+// configmapForInstance returns a instance ConfigMap object
+func (r *InstanceReconciler) configmapForInstance(m *terraformv1alpha1.Instance, input util.TerraVars) *corev1.ConfigMap {
+	configMapData := make(map[string]string, 0)
+
+	e := reflect.ValueOf(&input).Elem()
+
+	for i := 0; i < e.NumField(); i++ {
+		varName := e.Type().Field(i).Name
+		//varType := e.Type().Field(i).Type
+		varValue := fmt.Sprintf("%v", e.Field(i).Interface())
+
+		configMapData[varName] = varValue
+	}
+
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      m.Name,
+			Namespace: m.Namespace,
+		},
+		Data: configMapData,
+	}
+	return cm
+}
+
+func (r *InstanceReconciler) configmapToVars(cm *corev1.ConfigMap) util.TerraVars {
+
+	configMapData := cm.Data
+
+	output := util.TerraVars{
+		ProviderName: configMapData["ProviderName"],
+		Cloud:        configMapData["Cloud"],
+		AccessKey:    configMapData["AccessKey"],
+		SecretKey:    configMapData["SecretKey"],
+		Region:       configMapData["Region"],
+
+		NetworkName: configMapData["NetworkName"],
+		VPCCIDR:     configMapData["VPCCIDR"],
+		SubnetCIDR:  configMapData["SubnetCIDR"],
+		RouteCIDR:   configMapData["RouteCIDR"],
+
+		InstanceName: configMapData["InstanceName"],
+		InstanceType: configMapData["InstanceType"],
+		AMI:          configMapData["AMI"],
+		KeyName:      configMapData["KeyName"],
+	}
+
+	return output
 }
 
 // labelsForNetwork returns the labels for selecting the resources

@@ -89,6 +89,7 @@ func (r *NetworkReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 				log.Error(err, "Terraform Destroy Error")
 				return ctrl.Result{}, err
 			}
+
 			err = r.Delete(ctx, cm)
 			if err != nil {
 				log.Error(err, "Failed to delete new Confgimap", "Configmap.Namespace", cm.Namespace, "Configmap.Name", cm.Name)
