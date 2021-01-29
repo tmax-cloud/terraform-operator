@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/terraform-providers/terraform-provider-aws/aws"
+	"github.com/terraform-providers/terraform-provider-azurerm/azurerm"
 	"github.com/terraform-providers/terraform-provider-tls/tls"
 	"github.com/tmax-cloud/terraform-operator/terranova"
 )
@@ -18,6 +19,7 @@ var code string
 
 const stateFilename = "simple.tfstate"
 
+// Terraform HCL Input Variable
 type TerraVars struct {
 	// Provider
 	ProviderName string
@@ -39,101 +41,157 @@ type TerraVars struct {
 	KeyName      string
 }
 
+// Execute Terraform (Apply / Destroy)
 func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error {
 	var platform *terranova.Platform
 	var err error
 
 	// Define template code corrensponding to resource type
-	//if resourceType == "AWS_PROVIDER" {
-	//	code = AWS_PROVIDER_TEMPLATE
-	//} else
-	if resourceType == "AWS_NETWORK" {
-		code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_NETWORK_TEMPLATE
-		code = strings.Replace(code, "{{NET_NAME}}", input.NetworkName, -1)
-
-		platform, err = terranova.NewPlatform(code).
-			AddProvider("aws", aws.Provider()).
-			Var("access_key", input.AccessKey).
-			Var("secret_key", input.SecretKey).
-			Var("region", input.Region).
-			Var("vpc_cidr", input.VPCCIDR).
-			Var("subnet_cidr", input.SubnetCIDR).
-			Var("route_cidr", input.RouteCIDR).
-			PersistStateToFile(input.ProviderName + ".tfstate")
-
-		if err != nil {
-			return err
-		}
-
-	} else if resourceType == "AWS_INSTANCE" {
-
-		code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_NETWORK_TEMPLATE + "\n" + AWS_INSTANCE_TEMPLATE + "\n" + AWS_KEY_TEMPLATE
-		code = strings.Replace(code, "{{NET_NAME}}", input.NetworkName, -1)
-		code = strings.Replace(code, "{{INS_NAME}}", input.InstanceName, -1)
-
-		platform, err = terranova.NewPlatform(code).
-			AddProvider("aws", aws.Provider()).
-			AddProvider("tls", tls.Provider()).
-			Var("access_key", input.AccessKey).
-			Var("secret_key", input.SecretKey).
-			Var("region", input.Region).
-			Var("vpc_cidr", input.VPCCIDR).
-			Var("subnet_cidr", input.SubnetCIDR).
-			Var("route_cidr", input.RouteCIDR).
-			Var("instance_type", input.InstanceType).
-			Var("ami", input.AMI).
-			PersistStateToFile(input.ProviderName + ".tfstate")
-
-		if err != nil {
-			return err
-		}
-		/*
-			code = `
-			variable "c"    { default = 2 }
-			variable "key_name" {}
-			provider "aws" {
-			region        = "us-west-2"
-			}
-			resource "aws_instance" "server" {
-			instance_type = "t2.micro"
-			ami           = "ami-6e1a0117"
-			count         = "${var.c}"
-			key_name      = "${var.key_name}"
-			}
-			`
-			count := 1
-			keyName := "cloud"
+	if input.Cloud == "AWS" { // Platform : AWS
+		if resourceType == "NETWORK" {
+			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_NETWORK_TEMPLATE
+			code = strings.Replace(code, "{{NET_NAME}}", input.NetworkName, -1)
 
 			platform, err = terranova.NewPlatform(code).
 				AddProvider("aws", aws.Provider()).
-				Var("c", count).
-				Var("key_name", keyName).
-				PersistStateToFile(stateFilename)
+				Var("access_key", input.AccessKey).
+				Var("secret_key", input.SecretKey).
+				Var("region", input.Region).
+				Var("vpc_cidr", input.VPCCIDR).
+				Var("subnet_cidr", input.SubnetCIDR).
+				Var("route_cidr", input.RouteCIDR).
+				PersistStateToFile(input.NetworkName + ".tfstate")
 
 			if err != nil {
 				return err
 			}
-		*/
+		} else if resourceType == "INSTANCE" {
+			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_PROVIDER_TEMPLATE + "\n" + AWS_INSTANCE_TEMPLATE + "\n" + AWS_KEY_TEMPLATE
+			code = strings.Replace(code, "{{NET_NAME}}", input.NetworkName, -1)
+			code = strings.Replace(code, "{{INS_NAME}}", input.InstanceName, -1)
+
+			platform, err = terranova.NewPlatform(code).
+				AddProvider("aws", aws.Provider()).
+				AddProvider("tls", tls.Provider()).
+				Var("access_key", input.AccessKey).
+				Var("secret_key", input.SecretKey).
+				Var("region", input.Region).
+				Var("vpc_cidr", input.VPCCIDR).
+				Var("subnet_cidr", input.SubnetCIDR).
+				Var("route_cidr", input.RouteCIDR).
+				Var("instance_type", input.InstanceType).
+				Var("ami", input.AMI).
+				PersistStateToFile(input.InstanceName + ".tfstate")
+
+			if err != nil {
+				return err
+			}
+		} else {
+			err = errors.New("Not Found Error: Resource Type")
+			return err
+		}
+	} else if input.Cloud == "Azure" { // Platform : Azure
+		if resourceType == "NETWORK" {
+			code = AZURE_PROVIDER_TEMPLATE + "\n" + AZURE_NETWORK_TEMPLATE
+			code = strings.Replace(code, "{{NET_NAME}}", input.NetworkName, -1)
+
+			platform, err = terranova.NewPlatform(code).
+				AddProvider("azurerm", azurerm.Provider()).
+				Var("access_key", input.AccessKey).
+				Var("secret_key", input.SecretKey).
+				Var("region", input.Region).
+				Var("vpc_cidr", input.VPCCIDR).
+				Var("subnet_cidr", input.SubnetCIDR).
+				Var("route_cidr", input.RouteCIDR).
+				PersistStateToFile(input.NetworkName + ".tfstate")
+
+			if err != nil {
+				return err
+			}
+
+		} else if resourceType == "INSTANCE" {
+			code = AZURE_PROVIDER_TEMPLATE + "\n" + AZURE_NETWORK_TEMPLATE + "\n" + AZURE_INSTANCE_TEMPLATE + "\n" + AZURE_KEY_TEMPLATE
+			code = strings.Replace(code, "{{NET_NAME}}", input.NetworkName, -1)
+			code = strings.Replace(code, "{{INS_NAME}}", input.InstanceName, -1)
+
+			platform, err = terranova.NewPlatform(code).
+				AddProvider("azurerm", azurerm.Provider()).
+				AddProvider("tls", tls.Provider()).
+				Var("access_key", input.AccessKey).
+				Var("secret_key", input.SecretKey).
+				Var("region", input.Region).
+				Var("vpc_cidr", input.VPCCIDR).
+				Var("subnet_cidr", input.SubnetCIDR).
+				Var("route_cidr", input.RouteCIDR).
+				Var("instance_type", input.InstanceType).
+				Var("ami", input.AMI).
+				PersistStateToFile(input.InstanceName + ".tfstate")
+
+		} else {
+			err = errors.New("Not Found Error: Resource Type")
+			return err
+		}
+
+	} else if input.Cloud == "OpenStack" { // Platform : OpenStack
+		if resourceType == "NETWORK" {
+
+		} else if resourceType == "INSTANCE" {
+
+		} else {
+			err = errors.New("Not Found Error: Resource Type")
+			return err
+		}
 	} else {
-		err = errors.New("Not Found Error: Resource Type")
+		err = errors.New("Not Found Error: Cloud Platform")
 		return err
 	}
-
 	/*
-		platform, err := terranova.NewPlatform(code).
-			AddProvider("aws", aws.Provider()).
-			Var("c", count).
-			Var("key_name", keyName).
-			Var("access_key", access_key).
-			Var("secret_key", secret_key).
-			PersistStateToFile(stateFilename)
+		if resourceType == "AWS_NETWORK" {
+			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_NETWORK_TEMPLATE
+			code = strings.Replace(code, "{{NET_NAME}}", input.NetworkName, -1)
 
-		if err != nil {
+			platform, err = terranova.NewPlatform(code).
+				AddProvider("aws", aws.Provider()).
+				Var("access_key", input.AccessKey).
+				Var("secret_key", input.SecretKey).
+				Var("region", input.Region).
+				Var("vpc_cidr", input.VPCCIDR).
+				Var("subnet_cidr", input.SubnetCIDR).
+				Var("route_cidr", input.RouteCIDR).
+				PersistStateToFile(input.NetworkName + ".tfstate")
+
+			if err != nil {
+				return err
+			}
+
+		} else if resourceType == "AWS_INSTANCE" {
+			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_INSTANCE_TEMPLATE + "\n" + AWS_KEY_TEMPLATE
+			code = strings.Replace(code, "{{NET_NAME}}", input.NetworkName, -1)
+			code = strings.Replace(code, "{{INS_NAME}}", input.InstanceName, -1)
+
+			platform, err = terranova.NewPlatform(code).
+				AddProvider("aws", aws.Provider()).
+				AddProvider("tls", tls.Provider()).
+				Var("access_key", input.AccessKey).
+				Var("secret_key", input.SecretKey).
+				Var("region", input.Region).
+				Var("vpc_cidr", input.VPCCIDR).
+				Var("subnet_cidr", input.SubnetCIDR).
+				Var("route_cidr", input.RouteCIDR).
+				Var("instance_type", input.InstanceType).
+				Var("ami", input.AMI).
+				PersistStateToFile(input.InstanceName + ".tfstate")
+
+			if err != nil {
+				return err
+			}
+		} else {
+			err = errors.New("Not Found Error: Resource Type")
 			return err
 		}
 	*/
-	//terminate := (count == 0)
 
+	//terminate := (count == 0)
 	if err := platform.Apply(destroy); err != nil {
 		return err
 	}

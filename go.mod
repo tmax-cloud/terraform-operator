@@ -10,6 +10,7 @@ require (
 	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.1
 	github.com/terraform-providers/terraform-provider-aws v1.60.1-0.20191003145700-f8707a46c6ec
+	github.com/terraform-providers/terraform-provider-azurerm v1.38.0
 	github.com/terraform-providers/terraform-provider-null v1.0.0
 	github.com/terraform-providers/terraform-provider-tls v2.1.0+incompatible
 	github.com/zclconf/go-cty v1.7.1
