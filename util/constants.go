@@ -112,10 +112,10 @@ output "{{NET_NAME}}-sg-id" {
 	AWS_INSTANCE_TEMPLATE = `
 variable "key_pair" {default = "aws-key"}
 variable "instance_type" {}
-variable "ami" {}
+variable "image_id" {}
 	
 resource "aws_instance" "{{INS_NAME}}" {
-	ami = "${var.ami}"
+	ami = "${var.image_id}"
 	instance_type = "${var.instance_type}"
 	subnet_id = "${aws_subnet.{{NET_NAME}}-subnet-c.id}"
 	vpc_security_group_ids = [
@@ -262,6 +262,10 @@ resource "azurerm_network_interface_security_group_association" "{{NET_NAME}}" {
 }
 `
 	AZURE_INSTANCE_TEMPLATE = `
+#variable "key_pair" {default = "azure-key"}
+variable "instance_type" {}
+variable "image_id" {}
+
 # Generate random text for a unique storage account name
 resource "random_id" "randomId" {
     keepers = {
@@ -286,12 +290,12 @@ resource "azurerm_storage_account" "mystorageaccount" {
 }
 
 # Create virtual machine
-resource "azurerm_linux_virtual_machine" "myterraformvm" {
-    name                  = "{{NAME}}"
+resource "azurerm_linux_virtual_machine" "{{INS_NAME}}" {
+    name                  = "{{INS_NAME}}"
     location              = "{{REGION}}"
     resource_group_name   = azurerm_resource_group.myterraformgroup.name
     network_interface_ids = [azurerm_network_interface.{{NET_NAME}}-nic.id]
-    size                  = "Standard_DS1_v2"
+    size                  = "${var.instance_type}"
 
     os_disk {
         name              = "myOsDisk"
@@ -299,14 +303,15 @@ resource "azurerm_linux_virtual_machine" "myterraformvm" {
         storage_account_type = "Premium_LRS"
     }
 
-    source_image_reference {
-        publisher = "Canonical"
-        offer     = "UbuntuServer"
-        sku       = "18.04-LTS"
-        version   = "latest"
-    }
+    source_image_id = "${var.image_id}
+    #source_image_reference {
+    #    publisher = "Canonical"
+    #    offer     = "UbuntuServer"
+    #    sku       = "18.04-LTS"
+    #    version   = "latest"
+    #}
 
-    computer_name  = "{{NAME}}"
+    computer_name  = "{{INS_NAME}}"
     admin_username = "azureuser"
     disable_password_authentication = true
 
@@ -320,7 +325,7 @@ resource "azurerm_linux_virtual_machine" "myterraformvm" {
     }
 
     tags = {
-        environment = "{{NAME}}"
+        environment = "{{INS_NAME}}"
     }
 }
 	`

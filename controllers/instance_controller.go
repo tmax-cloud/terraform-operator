@@ -141,14 +141,14 @@ func (r *InstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	input.InstanceName = instance.Name
 	input.InstanceType = instance.Spec.Type
-	input.AMI = instance.Spec.Image
+	input.ImageID = instance.Spec.Image
 	input.KeyName = "aws-key"
 
 	instanceNetwork := instance.Spec.Network
 
 	fmt.Println("InstanceName:" + input.InstanceName)
 	fmt.Println("InstanceType:" + input.InstanceType)
-	fmt.Println("AMI:" + input.AMI)
+	fmt.Println("ImageID:" + input.ImageID)
 
 	network := &terraformv1alpha1.Network{}
 	err = r.Get(ctx, types.NamespacedName{Name: instanceNetwork, Namespace: instance.Namespace}, network)
@@ -193,9 +193,15 @@ func (r *InstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	input.ProviderName = provider.Name
 	input.Cloud = provider.Spec.Cloud
+	// AWS
 	input.AccessKey = provider.Spec.AccessKey
 	input.SecretKey = provider.Spec.SecretKey
 	input.Region = provider.Spec.Region
+	// Azure
+	input.SubscriptionID = provider.Spec.SubscriptionID
+	input.ClientID = provider.Spec.ClientID
+	input.ClientSecret = provider.Spec.ClientSecret
+	input.TenantID = provider.Spec.TenantID
 
 	fmt.Println("ProviderName:" + input.ProviderName)
 	fmt.Println("Cloud:" + input.Cloud)
@@ -203,6 +209,11 @@ func (r *InstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	fmt.Println("AccessKey:" + input.AccessKey)
 	fmt.Println("SecretKey:" + input.SecretKey)
 	fmt.Println("Region:" + input.Region)
+	// Azure
+	fmt.Println("AccessKey:" + input.SubscriptionID)
+	fmt.Println("ClientID:" + input.ClientID)
+	fmt.Println("ClietnSecret:" + input.ClientSecret)
+	fmt.Println("TenantID:" + input.TenantID)
 
 	//fileName := strings.ToLower(providerCloud) + "-instance.tf"
 	//terraDir := util.HCL_DIR + "/" + providerName
@@ -314,9 +325,12 @@ func (r *InstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	// Provision the Network Resource by Terraform
-	err = util.ExecuteTerraform(input, "AWS_INSTANCE", false)
+	if instance.Status.Phase != "provisioned" {
+		err = util.ExecuteTerraform(input, "AWS_INSTANCE", false)
+	}
+
 	if err != nil {
-		provider.Status.Phase = "error"
+		instance.Status.Phase = "error"
 		tErr := r.Status().Update(ctx, instance)
 		if tErr != nil {
 			log.Error(err, "Failed to update Instance Status")
@@ -327,7 +341,7 @@ func (r *InstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			return ctrl.Result{}, err
 		}
 	} else {
-		provider.Status.Phase = "provisioned"
+		instance.Status.Phase = "provisioned"
 		tErr := r.Status().Update(ctx, instance)
 		if tErr != nil {
 			log.Error(tErr, "Failed to update Instance Status")
@@ -399,16 +413,21 @@ func (r *InstanceReconciler) configmapForInstance(m *terraformv1alpha1.Instance,
 	return cm
 }
 
+// configmapToVars returns a Terraform Variable Struct
 func (r *InstanceReconciler) configmapToVars(cm *corev1.ConfigMap) util.TerraVars {
 
 	configMapData := cm.Data
 
 	output := util.TerraVars{
-		ProviderName: configMapData["ProviderName"],
-		Cloud:        configMapData["Cloud"],
-		AccessKey:    configMapData["AccessKey"],
-		SecretKey:    configMapData["SecretKey"],
-		Region:       configMapData["Region"],
+		ProviderName:   configMapData["ProviderName"],
+		Cloud:          configMapData["Cloud"],
+		AccessKey:      configMapData["AccessKey"],
+		SecretKey:      configMapData["SecretKey"],
+		Region:         configMapData["Region"],
+		SubscriptionID: configMapData["SubscriptionID"],
+		ClientID:       configMapData["ClientID"],
+		ClientSecret:   configMapData["ClientSecret"],
+		TenantID:       configMapData["TenantID"],
 
 		NetworkName: configMapData["NetworkName"],
 		VPCCIDR:     configMapData["VPCCIDR"],
@@ -417,7 +436,7 @@ func (r *InstanceReconciler) configmapToVars(cm *corev1.ConfigMap) util.TerraVar
 
 		InstanceName: configMapData["InstanceName"],
 		InstanceType: configMapData["InstanceType"],
-		AMI:          configMapData["AMI"],
+		ImageID:      configMapData["ImageID"],
 		KeyName:      configMapData["KeyName"],
 	}
 

@@ -166,9 +166,15 @@ func (r *NetworkReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	input.ProviderName = provider.Name
 	input.Cloud = provider.Spec.Cloud
+	// AWS
 	input.AccessKey = provider.Spec.AccessKey
 	input.SecretKey = provider.Spec.SecretKey
 	input.Region = provider.Spec.Region
+	// Azure
+	input.SubscriptionID = provider.Spec.SubscriptionID
+	input.ClientID = provider.Spec.ClientID
+	input.ClientSecret = provider.Spec.ClientSecret
+	input.TenantID = provider.Spec.TenantID
 
 	fmt.Println("ProviderName:" + input.ProviderName)
 	fmt.Println("Cloud:" + input.Cloud)
@@ -176,6 +182,11 @@ func (r *NetworkReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	fmt.Println("AccessKey:" + input.AccessKey)
 	fmt.Println("SecretKey:" + input.SecretKey)
 	fmt.Println("Region:" + input.Region)
+	// Azure
+	fmt.Println("AccessKey:" + input.SubscriptionID)
+	fmt.Println("ClientID:" + input.ClientID)
+	fmt.Println("ClietnSecret:" + input.ClientSecret)
+	fmt.Println("TenantID:" + input.TenantID)
 
 	//fileName := strings.ToLower(providerCloud) + "-network.tf"
 
@@ -266,10 +277,12 @@ func (r *NetworkReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	// Provision the Network Resource by Terraform
-	err = util.ExecuteTerraform(input, "AWS_NETWORK", false)
+	if network.Status.Phase != "provisioned" {
+		err = util.ExecuteTerraform(input, "AWS_NETWORK", false)
+	}
 
 	if err != nil {
-		provider.Status.Phase = "error"
+		network.Status.Phase = "error"
 		tErr := r.Status().Update(ctx, network)
 		if tErr != nil {
 			log.Error(err, "Failed to update Network Status")
@@ -280,7 +293,7 @@ func (r *NetworkReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			return ctrl.Result{}, err
 		}
 	} else {
-		provider.Status.Phase = "provisioned"
+		network.Status.Phase = "provisioned"
 		tErr := r.Status().Update(ctx, network)
 		if tErr != nil {
 			log.Error(tErr, "Failed to update Network Status")
@@ -367,17 +380,21 @@ func (r *NetworkReconciler) configmapForNetwork(m *terraformv1alpha1.Network, in
 	return cm
 }
 
-// configmapForNetwork returns a network ConfigMap object
+// configmapToVars returns a Terraform Variable Struct
 func (r *NetworkReconciler) configmapToVars(cm *corev1.ConfigMap) util.TerraVars {
 
 	configMapData := cm.Data
 
 	output := util.TerraVars{
-		ProviderName: configMapData["ProviderName"],
-		Cloud:        configMapData["Cloud"],
-		AccessKey:    configMapData["AccessKey"],
-		SecretKey:    configMapData["SecretKey"],
-		Region:       configMapData["Region"],
+		ProviderName:   configMapData["ProviderName"],
+		Cloud:          configMapData["Cloud"],
+		AccessKey:      configMapData["AccessKey"],
+		SecretKey:      configMapData["SecretKey"],
+		Region:         configMapData["Region"],
+		SubscriptionID: configMapData["SubscriptionID"],
+		ClientID:       configMapData["ClientID"],
+		ClientSecret:   configMapData["ClientSecret"],
+		TenantID:       configMapData["TenantID"],
 
 		NetworkName: configMapData["NetworkName"],
 		VPCCIDR:     configMapData["VPCCIDR"],

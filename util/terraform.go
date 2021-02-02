@@ -21,14 +21,20 @@ const stateFilename = "simple.tfstate"
 
 // Terraform HCL Input Variable
 type TerraVars struct {
-	// Provider
+	/* Provider */
 	ProviderName string
 	Cloud        string
-	AccessKey    string
-	SecretKey    string
 	Region       string
+	// AWS
+	AccessKey string
+	SecretKey string
+	// Azure
+	SubscriptionID string
+	ClientID       string
+	ClientSecret   string
+	TenantID       string
 
-	// Network
+	/* Network */
 	NetworkName string
 	VPCCIDR     string
 	SubnetCIDR  string
@@ -37,8 +43,18 @@ type TerraVars struct {
 	// Instance
 	InstanceName string
 	InstanceType string
-	AMI          string
+	ImageID      string
 	KeyName      string
+}
+
+// Build Terraform HCL (Hashicorp Configuration Lanaguarge) Code from Templates
+func buildTerraformCode(cloud, resourceType string) {
+
+}
+
+// Initialize Terraform Platform for Provisioning
+func setTerraformPlatform(cloud, resourceType string) {
+
 }
 
 // Execute Terraform (Apply / Destroy)
@@ -80,7 +96,7 @@ func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error 
 				Var("subnet_cidr", input.SubnetCIDR).
 				Var("route_cidr", input.RouteCIDR).
 				Var("instance_type", input.InstanceType).
-				Var("ami", input.AMI).
+				Var("image_id", input.ImageID).
 				PersistStateToFile(input.InstanceName + ".tfstate")
 
 			if err != nil {
@@ -91,6 +107,7 @@ func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error 
 			return err
 		}
 	} else if input.Cloud == "Azure" { // Platform : Azure
+
 		if resourceType == "NETWORK" {
 			code = AZURE_PROVIDER_TEMPLATE + "\n" + AZURE_NETWORK_TEMPLATE
 			code = strings.Replace(code, "{{NET_NAME}}", input.NetworkName, -1)
@@ -124,7 +141,7 @@ func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error 
 				Var("subnet_cidr", input.SubnetCIDR).
 				Var("route_cidr", input.RouteCIDR).
 				Var("instance_type", input.InstanceType).
-				Var("ami", input.AMI).
+				Var("image_id", input.ImageID).
 				PersistStateToFile(input.InstanceName + ".tfstate")
 
 		} else {

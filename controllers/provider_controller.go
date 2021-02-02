@@ -109,12 +109,10 @@ func (r *ProviderReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	providerSK := provider.Spec.SecretKey
 	providerRegion := provider.Spec.Region
 	// Azure
-	/*
-		providerSubID := provider.Spec.SubcriptionID
-		providerClientID := provider.Spec.ClientID
-		providerClientSecret := provider.Spec.ClientSecret
-		providerTenantID := provider.Spec.TenantID
-	*/
+	providerSubID := provider.Spec.SubscriptionID
+	providerClientID := provider.Spec.ClientID
+	providerClientSecret := provider.Spec.ClientSecret
+	providerTenantID := provider.Spec.TenantID
 
 	//fileName := strings.ToLower(providerCloud) + "-provider.tf"
 
@@ -125,12 +123,10 @@ func (r *ProviderReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	fmt.Println("providerSK:" + providerSK)
 	fmt.Println("providerRegion:" + providerRegion)
 	// Azure
-	/*
-		fmt.Println("providerSubID:" + providerSubID)
-		fmt.Println("providerClientID:" + providerClientID)
-		fmt.Println("providerClientSecret:" + providerClientSecret)
-		fmt.Println("providerTenantID:" + providerTenantID)
-	*/
+	fmt.Println("providerSubID:" + providerSubID)
+	fmt.Println("providerClientID:" + providerClientID)
+	fmt.Println("providerClientSecret:" + providerClientSecret)
+	fmt.Println("providerTenantID:" + providerTenantID)
 
 	// Create Terraform Working Directory
 	//terraDir := util.HCL_DIR + "/" + providerName

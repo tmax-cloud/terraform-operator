@@ -38,6 +38,10 @@ spec:
           properties:
             accesskey:
               type: string
+            clientid:
+              type: string
+            clientsecret:
+              type: string
             cloud:
               type: string
             region:
@@ -49,6 +53,10 @@ spec:
                 to remove/update
               format: int32
               type: integer
+            subscriptionid:
+              type: string
+            tenantid:
+              type: string
           type: object
         status:
           description: ProviderStatus defines the observed state of Provider
