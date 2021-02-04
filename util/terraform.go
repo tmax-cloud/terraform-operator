@@ -15,11 +15,7 @@ import (
 	"github.com/tmax-cloud/terraform-operator/terranova"
 )
 
-var code string
-
-const stateFilename = "simple.tfstate"
-
-// Terraform HCL Input Variable
+// Terraform HCL Input Parameters Struct
 type TerraVars struct {
 	/* Provider */
 	ProviderName string
@@ -59,10 +55,11 @@ func setTerraformPlatform(cloud, resourceType string) {
 
 // Execute Terraform (Apply / Destroy)
 func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error {
-	var platform *terranova.Platform
+	var platform *terranova.Platform // Platform is the platform to be managed by Terraform
+	var code string                  // HCL (Hashicorp Configuration Language)
 	var err error
 
-	// Define template code corrensponding to resource type
+	// Define the platform corrensponding to resource type
 	if input.Cloud == "AWS" { // Platform : AWS
 		if resourceType == "NETWORK" {
 			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_NETWORK_TEMPLATE
@@ -107,15 +104,16 @@ func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error 
 			return err
 		}
 	} else if input.Cloud == "Azure" { // Platform : Azure
-
 		if resourceType == "NETWORK" {
 			code = AZURE_PROVIDER_TEMPLATE + "\n" + AZURE_NETWORK_TEMPLATE
 			code = strings.Replace(code, "{{NET_NAME}}", input.NetworkName, -1)
 
 			platform, err = terranova.NewPlatform(code).
 				AddProvider("azurerm", azurerm.Provider()).
-				Var("access_key", input.AccessKey).
-				Var("secret_key", input.SecretKey).
+				Var("subscription_id", input.SubscriptionID).
+				Var("client_id", input.ClientID).
+				Var("client_secret", input.ClientSecret).
+				Var("tenant_id", input.TenantID).
 				Var("region", input.Region).
 				Var("vpc_cidr", input.VPCCIDR).
 				Var("subnet_cidr", input.SubnetCIDR).
@@ -125,7 +123,6 @@ func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error 
 			if err != nil {
 				return err
 			}
-
 		} else if resourceType == "INSTANCE" {
 			code = AZURE_PROVIDER_TEMPLATE + "\n" + AZURE_NETWORK_TEMPLATE + "\n" + AZURE_INSTANCE_TEMPLATE + "\n" + AZURE_KEY_TEMPLATE
 			code = strings.Replace(code, "{{NET_NAME}}", input.NetworkName, -1)
@@ -134,8 +131,10 @@ func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error 
 			platform, err = terranova.NewPlatform(code).
 				AddProvider("azurerm", azurerm.Provider()).
 				AddProvider("tls", tls.Provider()).
-				Var("access_key", input.AccessKey).
-				Var("secret_key", input.SecretKey).
+				Var("subscription_id", input.SubscriptionID).
+				Var("client_id", input.ClientID).
+				Var("client_secret", input.ClientSecret).
+				Var("tenant_id", input.TenantID).
 				Var("region", input.Region).
 				Var("vpc_cidr", input.VPCCIDR).
 				Var("subnet_cidr", input.SubnetCIDR).
@@ -150,14 +149,9 @@ func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error 
 		}
 
 	} else if input.Cloud == "OpenStack" { // Platform : OpenStack
-		if resourceType == "NETWORK" {
-
-		} else if resourceType == "INSTANCE" {
-
-		} else {
-			err = errors.New("Not Found Error: Resource Type")
-			return err
-		}
+		/* To Do */
+	} else if input.Cloud == "VSphere" { // Platform : VSphere
+		/* To Do */
 	} else {
 		err = errors.New("Not Found Error: Cloud Platform")
 		return err
@@ -209,6 +203,7 @@ func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error 
 	*/
 
 	//terminate := (count == 0)
+	// Apply brings the platform to the desired state.
 	if err := platform.Apply(destroy); err != nil {
 		return err
 	}
