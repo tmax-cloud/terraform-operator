@@ -85,7 +85,7 @@ func (r *InstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			// Destroy the Provisioned Resources for Deleted Object (Network)
 			destroy := true
 			//err = util.ExecuteTerraform_CLI(util.HCL_DIR, isDestroy)
-			err = util.ExecuteTerraform(input, "AWS_INSTANCE", destroy)
+			err = util.ExecuteTerraform(input, "INSTANCE", destroy)
 			if err != nil {
 				log.Error(err, "Terraform Destroy Error")
 				return ctrl.Result{}, err
@@ -218,92 +218,13 @@ func (r *InstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	//fileName := strings.ToLower(providerCloud) + "-instance.tf"
 	//terraDir := util.HCL_DIR + "/" + providerName
 
-	// Set Network instance as the owner and controller
+	// Set Network as the owner and controller in Instance
 	ctrl.SetControllerReference(network, instance, r.Scheme)
 	err = r.Update(ctx, instance)
 	if err != nil {
 		log.Error(err, "Failed to update Instance field - ownerReferences")
 		return ctrl.Result{}, err
 	}
-	/*
-		// Replace HCL template into HCL file
-		input, err := ioutil.ReadFile(util.HCL_DIR + "/" + fileName + "_template")
-		if err != nil {
-			log.Error(err, "Failed to read HCL template")
-			return ctrl.Result{}, err
-		}
-
-		lines := strings.Split(string(input), "\n")
-
-		for i, line := range lines {
-			if strings.Contains(line, "{{IMAGE}}") {
-				lines[i] = strings.Replace(lines[i], "{{IMAGE}}", instanceImage, -1)
-			}
-			if strings.Contains(line, "{{TYPE}}") {
-				lines[i] = strings.Replace(lines[i], "{{TYPE}}", instanceType, -1)
-			}
-			if strings.Contains(line, "{{NAME}}") {
-				lines[i] = strings.Replace(lines[i], "{{NAME}}", instanceName, -1)
-			}
-			if strings.Contains(line, "{{NET_NAME}}") {
-				lines[i] = strings.Replace(lines[i], "{{NET_NAME}}", networkName, -1)
-			}
-		}
-
-		output := strings.Join(lines, "\n")
-		err = ioutil.WriteFile(terraDir+"/"+fileName, []byte(output), 0644)
-		if err != nil {
-			log.Error(err, "Failed to write HCL file")
-			return ctrl.Result{}, err
-		}
-
-		// Generate Key file
-		fileName = strings.ToLower(providerCloud) + "-key.tf"
-
-		src, err := os.Open(util.HCL_DIR + "/" + fileName + "_template")
-		if err != nil {
-			log.Error(err, "Failed to open HCL template")
-			return ctrl.Result{}, err
-		}
-		defer src.Close()
-
-		dst, err := os.Create(terraDir + "/" + fileName)
-		if err != nil {
-			log.Error(err, "Failed to Create HCL file")
-			return ctrl.Result{}, err
-		}
-		defer dst.Close()
-
-		_, err = io.Copy(dst, src)
-		if err != nil {
-			log.Error(err, "Failed to copy HCL file")
-			return ctrl.Result{}, err
-		}
-
-		// Provision the resource provisioning by Terraform CLI
-		isDestroy := false
-		err = util.ExecuteTerraform_CLI(terraDir, isDestroy)
-
-		if err != nil {
-			provider.Status.Phase = "error"
-			tErr := r.Status().Update(ctx, provider)
-			if tErr != nil {
-				log.Error(err, "Failed to update Instance Status")
-				return ctrl.Result{}, tErr
-			}
-			if err != nil {
-				log.Error(err, "Terraform Apply Error")
-				return ctrl.Result{}, err
-			}
-		} else {
-			provider.Status.Phase = "applyed"
-			tErr := r.Status().Update(ctx, provider)
-			if tErr != nil {
-				log.Error(tErr, "Failed to update Instance Status")
-				return ctrl.Result{}, tErr
-			}
-		}
-	*/
 
 	// Check if the configmap already exists, if not create a new one
 	cmList := &corev1.ConfigMap{}
@@ -324,9 +245,10 @@ func (r *InstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
-	// Provision the Network Resource by Terraform
+	// Provision the Network Resource by Terraform. It'll skip
+	// when `Phase` is `provisioned`.
 	if instance.Status.Phase != "provisioned" {
-		err = util.ExecuteTerraform(input, "AWS_INSTANCE", false)
+		err = util.ExecuteTerraform(input, "INSTANCE", false)
 	}
 
 	if err != nil {

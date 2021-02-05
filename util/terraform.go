@@ -15,7 +15,7 @@ import (
 	"github.com/tmax-cloud/terraform-operator/terranova"
 )
 
-// Terraform HCL Input Parameters Struct
+// Terraform HCL Input Parameters Structure
 type TerraVars struct {
 	/* Provider */
 	ProviderName string
@@ -36,21 +36,11 @@ type TerraVars struct {
 	SubnetCIDR  string
 	RouteCIDR   string
 
-	// Instance
+	/* Instance */
 	InstanceName string
 	InstanceType string
 	ImageID      string
 	KeyName      string
-}
-
-// Build Terraform HCL (Hashicorp Configuration Lanaguarge) Code from Templates
-func buildTerraformCode(cloud, resourceType string) {
-
-}
-
-// Initialize Terraform Platform for Provisioning
-func setTerraformPlatform(cloud, resourceType string) {
-
 }
 
 // Execute Terraform (Apply / Destroy)
@@ -79,7 +69,7 @@ func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error 
 				return err
 			}
 		} else if resourceType == "INSTANCE" {
-			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_PROVIDER_TEMPLATE + "\n" + AWS_INSTANCE_TEMPLATE + "\n" + AWS_KEY_TEMPLATE
+			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_NETWORK_TEMPLATE + "\n" + AWS_INSTANCE_TEMPLATE + "\n" + AWS_KEY_TEMPLATE
 			code = strings.Replace(code, "{{NET_NAME}}", input.NetworkName, -1)
 			code = strings.Replace(code, "{{INS_NAME}}", input.InstanceName, -1)
 
@@ -156,51 +146,6 @@ func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error 
 		err = errors.New("Not Found Error: Cloud Platform")
 		return err
 	}
-	/*
-		if resourceType == "AWS_NETWORK" {
-			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_NETWORK_TEMPLATE
-			code = strings.Replace(code, "{{NET_NAME}}", input.NetworkName, -1)
-
-			platform, err = terranova.NewPlatform(code).
-				AddProvider("aws", aws.Provider()).
-				Var("access_key", input.AccessKey).
-				Var("secret_key", input.SecretKey).
-				Var("region", input.Region).
-				Var("vpc_cidr", input.VPCCIDR).
-				Var("subnet_cidr", input.SubnetCIDR).
-				Var("route_cidr", input.RouteCIDR).
-				PersistStateToFile(input.NetworkName + ".tfstate")
-
-			if err != nil {
-				return err
-			}
-
-		} else if resourceType == "AWS_INSTANCE" {
-			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_INSTANCE_TEMPLATE + "\n" + AWS_KEY_TEMPLATE
-			code = strings.Replace(code, "{{NET_NAME}}", input.NetworkName, -1)
-			code = strings.Replace(code, "{{INS_NAME}}", input.InstanceName, -1)
-
-			platform, err = terranova.NewPlatform(code).
-				AddProvider("aws", aws.Provider()).
-				AddProvider("tls", tls.Provider()).
-				Var("access_key", input.AccessKey).
-				Var("secret_key", input.SecretKey).
-				Var("region", input.Region).
-				Var("vpc_cidr", input.VPCCIDR).
-				Var("subnet_cidr", input.SubnetCIDR).
-				Var("route_cidr", input.RouteCIDR).
-				Var("instance_type", input.InstanceType).
-				Var("ami", input.AMI).
-				PersistStateToFile(input.InstanceName + ".tfstate")
-
-			if err != nil {
-				return err
-			}
-		} else {
-			err = errors.New("Not Found Error: Resource Type")
-			return err
-		}
-	*/
 
 	//terminate := (count == 0)
 	// Apply brings the platform to the desired state.

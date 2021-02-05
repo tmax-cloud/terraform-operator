@@ -82,9 +82,9 @@ func (r *NetworkReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			input := r.configmapToVars(cm)
 
 			// Destroy the Provisioned Resources for Deleted Object (Network)
-			destroy := true
 			//err = util.ExecuteTerraform_CLI(util.HCL_DIR, isDestroy)
-			err = util.ExecuteTerraform(input, "AWS_NETWORK", destroy)
+			destroy := true
+			err = util.ExecuteTerraform(input, "NETWORK", destroy)
 			if err != nil {
 				log.Error(err, "Terraform Destroy Error")
 				return ctrl.Result{}, err
@@ -189,74 +189,16 @@ func (r *NetworkReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	fmt.Println("TenantID:" + input.TenantID)
 
 	//fileName := strings.ToLower(providerCloud) + "-network.tf"
-
 	//terraDir := util.HCL_DIR + "/" + networkProvider
 
-	// Set Provider instance as the owner and controller
+	// Set Provider as the owner and controller in Network
 	ctrl.SetControllerReference(provider, network, r.Scheme)
 	err = r.Update(ctx, network)
 	if err != nil {
 		log.Error(err, "Failed to update Network field - ownerReferences")
 		return ctrl.Result{}, err
 	}
-	/*
-		// Replace HCL template into HCL file
-		input, err := ioutil.ReadFile(util.HCL_DIR + "/" + fileName + "_template")
-		if err != nil {
-			log.Error(err, "Failed to read HCL template")
-			return ctrl.Result{}, err
-		}
 
-		lines := strings.Split(string(input), "\n")
-
-		for i, line := range lines {
-			if strings.Contains(line, "{{NAME}}") {
-				lines[i] = strings.Replace(lines[i], "{{NAME}}", networkName, -1)
-			}
-			if strings.Contains(line, "{{VPC_CIDR}}") {
-				lines[i] = strings.Replace(lines[i], "{{VPC_CIDR}}", networkVPC, -1)
-			}
-			if strings.Contains(line, "{{SUBNET_CIDR}}") {
-				lines[i] = strings.Replace(lines[i], "{{SUBNET_CIDR}}", networkSubnet, -1)
-			}
-			if strings.Contains(line, "{{ROUTE_CIDR}}") {
-				lines[i] = strings.Replace(lines[i], "{{ROUTE_CIDR}}", networkRoute, -1)
-			}
-			if strings.Contains(line, "{{REGION}}") {
-				lines[i] = strings.Replace(lines[i], "{{REGION}}", providerRegion, -1)
-			}
-		}
-		output := strings.Join(lines, "\n")
-		err = ioutil.WriteFile(terraDir+"/"+fileName, []byte(output), 0644)
-		if err != nil {
-			log.Error(err, "Failed to write HCL file")
-			return ctrl.Result{}, err
-		}
-
-		// Provision the resource provisioning by Terraform CLI
-		isDestroy := false
-		err = util.ExecuteTerraform_CLI(terraDir, isDestroy)
-
-		if err != nil {
-			provider.Status.Phase = "error"
-			tErr := r.Status().Update(ctx, network)
-			if tErr != nil {
-				log.Error(err, "Failed to update Network Status")
-				return ctrl.Result{}, tErr
-			}
-			if err != nil {
-				log.Error(err, "Terraform Apply Error")
-				return ctrl.Result{}, err
-			}
-		} else {
-			provider.Status.Phase = "provisioned"
-			tErr := r.Status().Update(ctx, network)
-			if tErr != nil {
-				log.Error(tErr, "Failed to update Network Status")
-				return ctrl.Result{}, tErr
-			}
-		}
-	*/
 	// Check if the configmap already exists, if not create a new one
 	cmList := &corev1.ConfigMap{}
 	err = r.Get(ctx, types.NamespacedName{Name: network.Name, Namespace: network.Namespace}, cmList)
@@ -276,9 +218,10 @@ func (r *NetworkReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
-	// Provision the Network Resource by Terraform
+	// Provision the Network Resource by Terraform. It'll skip
+	// when `Phase` is `provisioned`.
 	if network.Status.Phase != "provisioned" {
-		err = util.ExecuteTerraform(input, "AWS_NETWORK", false)
+		err = util.ExecuteTerraform(input, "NETWORK", false)
 	}
 
 	if err != nil {
@@ -355,21 +298,7 @@ func (r *NetworkReconciler) configmapForNetwork(m *terraformv1alpha1.Network, in
 
 		configMapData[varName] = varValue
 	}
-	/*
-		configMapData["ProviderName"] = input.ProviderName
-		configMapData["Cloud"] = input.Cloud
-		configMapData["AccessKey"] = input.AccessKey
-		configMapData["SecretKey"] = input.SecretKey
-		configMapData["Region"] = input.Region
-		configMapData["NetworkName"] = input.NetworkName
-		configMapData["VPCCIDR"] = input.VPCCIDR
-		configMapData["SubnetCIDR"] = input.SubnetCIDR
-		configMapData["RouteCIDR"] = input.RouteCIDR
-		configMapData["InstanceName"] = input.InstanceName
-		configMapData["InstanceType"] = input.InstanceType
-		configMapData["AMI"] = input.AMI
-		configMapData["KeyName"] = input.KeyName
-	*/
+
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      m.Name,
