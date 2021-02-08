@@ -104,77 +104,34 @@ func (r *InstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
-	// Check if the deployment already exists, if not create a new one
-	found := &appsv1.Deployment{}
-	err = r.Get(ctx, types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, found)
-	if err != nil && errors.IsNotFound(err) {
-		// Define a new deployment
-		dep := r.deploymentForInstance(instance)
-		log.Info("Creating a new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
-		err = r.Create(ctx, dep)
-		if err != nil {
-			log.Error(err, "Failed to create new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
-			return ctrl.Result{}, err
-		}
-		// Deployment created successfully - return and requeue
-		return ctrl.Result{Requeue: true}, nil
-	} else if err != nil {
-		log.Error(err, "Failed to get Deployment")
-		return ctrl.Result{}, err
-	}
-
-	// Ensure the deployment size is the same as the spec
-	size := instance.Spec.Size
-	if *found.Spec.Replicas != size {
-		found.Spec.Replicas = &size
-		err = r.Update(ctx, found)
-		if err != nil {
-			log.Error(err, "Failed to update Deployment", "Deployment.Namespace", found.Namespace, "Deployment.Name", found.Name)
-			return ctrl.Result{}, err
-		}
-		// Spec updated - return and requeue
-		return ctrl.Result{Requeue: true}, nil
-	}
-
 	// your logic here
 	input := util.TerraVars{}
 
 	input.InstanceName = instance.Name
 	input.InstanceType = instance.Spec.Type
 	input.ImageID = instance.Spec.Image
-	input.KeyName = "aws-key"
+	input.KeyName = instance.Spec.Key
 
 	instanceNetwork := instance.Spec.Network
 
 	fmt.Println("InstanceName:" + input.InstanceName)
 	fmt.Println("InstanceType:" + input.InstanceType)
 	fmt.Println("ImageID:" + input.ImageID)
+	fmt.Println("KeyName:" + input.KeyName)
 
+	// Fetch the "Network" instance related to "Instance" (Instance -> Network)
 	network := &terraformv1alpha1.Network{}
 	err = r.Get(ctx, types.NamespacedName{Name: instanceNetwork, Namespace: instance.Namespace}, network)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			log.Info("Network resource not found. Ignoring since object must be deleted")
-			return ctrl.Result{}, nil
-		}
 		// Error reading the object - requeue the request.
 		log.Error(err, "Failed to get Network")
 		return ctrl.Result{}, err
 	}
 
+	// Fetch the "Provider" instance related to "Network" (Network -> Provider)
 	provider := &terraformv1alpha1.Provider{}
 	err = r.Get(ctx, types.NamespacedName{Name: network.Spec.Provider, Namespace: network.Namespace}, provider)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			log.Info("Provider resource not found. Ignoring since object must be deleted")
-			return ctrl.Result{}, nil
-		}
 		// Error reading the object - requeue the request.
 		log.Error(err, "Failed to get Provider")
 		return ctrl.Result{}, err
@@ -218,10 +175,9 @@ func (r *InstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	//fileName := strings.ToLower(providerCloud) + "-instance.tf"
 	//terraDir := util.HCL_DIR + "/" + providerName
 
-	// Set Network as the owner and controller in Instance
+	// Set Network as the owner and controller in Instance CR
 	ctrl.SetControllerReference(network, instance, r.Scheme)
-	err = r.Update(ctx, instance)
-	if err != nil {
+	if err = r.Update(ctx, instance); err != nil {
 		log.Error(err, "Failed to update Instance field - ownerReferences")
 		return ctrl.Result{}, err
 	}
@@ -251,6 +207,7 @@ func (r *InstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		err = util.ExecuteTerraform(input, "INSTANCE", false)
 	}
 
+	// Set 'Phase' Status depending on the result of 'ExecuteTerraform'
 	if err != nil {
 		instance.Status.Phase = "error"
 		tErr := r.Status().Update(ctx, instance)

@@ -38,6 +38,8 @@ spec:
           properties:
             image:
               type: string
+            key:
+              type: string
             network:
               type: string
             provider:

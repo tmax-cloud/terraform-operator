@@ -34,6 +34,7 @@ type InstanceSpec struct {
 	Network  string `json:"network,omitempty"`
 	Image    string `json:"image,omitempty"`
 	Type     string `json:"type,omitempty"`
+	Key      string `json:"key,omitempty"`
 }
 
 // InstanceStatus defines the observed state of Instance

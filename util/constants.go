@@ -2,7 +2,7 @@ package util
 
 const (
 	HCL_DIR           = "/terraform"
-	TERRAFORM_VERSION = "0.11.13"
+	TERRAFORM_VERSION = "0.12.20"
 
 	AWS_PROVIDER_TEMPLATE = `
 variable "access_key" {}
@@ -107,7 +107,7 @@ output "{{NET_NAME}}-subnet-c-id" {
 output "{{NET_NAME}}-sg-id" {
 	value = "${aws_security_group.{{NET_NAME}}-sg.id}"
 }
-	`
+`
 
 	AWS_INSTANCE_TEMPLATE = `
 variable "key_pair" {default = "aws-key"}
@@ -128,7 +128,7 @@ resource "aws_instance" "{{INS_NAME}}" {
 	}
 	associate_public_ip_address = true
 } 
-	`
+`
 
 	AWS_KEY_TEMPLATE = `
 resource "tls_private_key" "example" {
@@ -137,10 +137,10 @@ resource "tls_private_key" "example" {
 }
 	
 resource "aws_key_pair" "terraform-key" {
-	key_name = "aws-key"
+	key_name = "${var.key_pair}"
 	public_key = "${tls_private_key.example.public_key_openssh}"
 }	  
-	`
+`
 	/*
 			AWS_INSTANCE_TEMPLATE = `
 			variable "c"    { default = 2 }
@@ -157,25 +157,32 @@ resource "aws_key_pair" "terraform-key" {
 			}
 		    `
 	*/
+
 	AZURE_PROVIDER_TEMPLATE = `
 # Configure the Microsoft Azure Provider
+variable "subscription_id" {}
+variable "client_id" {}
+variable "client_secret" {}
+variable "tenant_id" {}
+variable "region" {}
+
 provider "azurerm" {
 	# The "feature" block is required for AzureRM provider 2.x.
 	# If you're using version 1.x, the "features" block is not allowed.
 	version = "~>2.0"
 
-	subscription_id = "{{SUBSCRIPTION_ID}}"
-	client_id       = "{{CLIENT_ID}}"
-	client_secret   = "{{CLIENT_SECRET}}"
-	tenant_id       = "{{TENENT_ID}}"
+	subscription_id = "${var.subscription_id}"
+	client_id       = "${var.client_id}"
+	client_secret   = "${var.client_secret}"
+	tenant_id       = "${var.tenant_id}"
 
 	features {}
 }
 
 # Create a resource group if it doesn't exist
 resource "azurerm_resource_group" "{{NET_NAME}}-group" {
-	name     = "terrformtestgroup"
-	location = "{{REGION}}"
+	name     = "{{NET_NAME}}-group"
+	location = "${var.region}"
 
 	tags = {
 		environment = "{{NET_NAME}}-group"
@@ -183,11 +190,15 @@ resource "azurerm_resource_group" "{{NET_NAME}}-group" {
 }
 `
 	AZURE_NETWORK_TEMPLATE = `
+variable "vpc_cidr" {}
+variable "subnet_cidr" {}
+variable "route_cidr" {}
+
 # Create virtual network
 resource "azurerm_virtual_network" "{{NET_NAME}}-vpc" {
     name                = "{{NET_NAME}}"
-    address_space       = ["{{VPC_CIDR}}"]
-    location            = "{{REGION}}"
+    address_space       = ["${var.vpc_cidr}"]
+    location            = "${var.region}"
     resource_group_name = azurerm_resource_group.myterraformgroup.name
 
     tags = {
@@ -200,13 +211,13 @@ resource "azurerm_subnet" "{{NET_NAME}}-subnet" {
     name                 = "{{NET_NAME}}"
     resource_group_name  = azurerm_resource_group.myterraformgroup.name
     virtual_network_name = azurerm_virtual_network.{{NET_NAME}}-vpc.name
-    address_prefixes       = ["{{SUBNET_CIDR}}"]
+    address_prefixes       = ["${var.subnet_cidr}"]
 }
 
 # Create public IPs
 resource "azurerm_public_ip" "{{NET_NAME}}-publicip" {
     name                         = "{{NET_NAME}}-publicip"
-    location                     = "{{REGION}}"
+    location                     = "${var.region}"
     resource_group_name          = azurerm_resource_group.myterraformgroup.name
     allocation_method            = "Dynamic"
 
@@ -218,7 +229,7 @@ resource "azurerm_public_ip" "{{NET_NAME}}-publicip" {
 # Create Network Security Group and rule
 resource "azurerm_network_security_group" "{{NET_NAME}}-sg" {
     name                = "{{NET_NAME}}-sg"
-    location            = "{{REGION}}"
+    location            = "${var.region}"
     resource_group_name = azurerm_resource_group.myterraformgroup.name
 
     security_rule {
@@ -240,7 +251,7 @@ resource "azurerm_network_security_group" "{{NET_NAME}}-sg" {
 # Create network interface
 resource "azurerm_network_interface" "{{NET_NAME}}-nic" {
     name                      = "{{NET_NAME}}-nic"
-    location                  = "{{REGION}}"
+    location                  = "${var.region}"
     resource_group_name       = azurerm_resource_group.myterraformgroup.name
 
     ip_configuration {
@@ -280,7 +291,7 @@ resource "random_id" "randomId" {
 resource "azurerm_storage_account" "mystorageaccount" {
     name                        = "diag${random_id.randomId.hex}"
     resource_group_name         = azurerm_resource_group.myterraformgroup.name
-    location                    = "{{REGION}}"
+    location                    = "${var.region}"
     account_tier                = "Standard"
     account_replication_type    = "LRS"
 
@@ -292,7 +303,7 @@ resource "azurerm_storage_account" "mystorageaccount" {
 # Create virtual machine
 resource "azurerm_linux_virtual_machine" "{{INS_NAME}}" {
     name                  = "{{INS_NAME}}"
-    location              = "{{REGION}}"
+    location              = "${var.region}"
     resource_group_name   = azurerm_resource_group.myterraformgroup.name
     network_interface_ids = [azurerm_network_interface.{{NET_NAME}}-nic.id]
     size                  = "${var.instance_type}"

@@ -21,10 +21,10 @@ type TerraVars struct {
 	ProviderName string
 	Cloud        string
 	Region       string
-	// AWS
+	// AWS Field
 	AccessKey string
 	SecretKey string
-	// Azure
+	// Azure Field
 	SubscriptionID string
 	ClientID       string
 	ClientSecret   string
@@ -43,13 +43,21 @@ type TerraVars struct {
 	KeyName      string
 }
 
-// Execute Terraform (Apply / Destroy)
+// Execute Terraform (Go Package)
+// Provison or Destroy the remote resource
 func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error {
 	var platform *terranova.Platform // Platform is the platform to be managed by Terraform
 	var code string                  // HCL (Hashicorp Configuration Language)
 	var err error
 
-	// Define the platform corrensponding to resource type
+	/*
+		platform, err = terranova.NewPlatform(code). 		// HCL 코드 기반으로 Platform 초기화 (Default Variable)
+		AddProvider("aws", aws.Provider()).					// Provider 추가 (e.g. AWS, Azure, TLS 등)
+		Var("access_key", input.AccessKey).					// HCL 코드 내 변수 설정
+		PersistStateToFile(input.NetworkName + ".tfstate") 	// Terraform State File 설정
+	*/
+
+	// Define the platform corrensponding to Cloud - Resource type
 	if input.Cloud == "AWS" { // Platform : AWS
 		if resourceType == "NETWORK" {
 			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_NETWORK_TEMPLATE
@@ -84,6 +92,7 @@ func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error 
 				Var("route_cidr", input.RouteCIDR).
 				Var("instance_type", input.InstanceType).
 				Var("image_id", input.ImageID).
+				Var("key_pair", input.KeyName).
 				PersistStateToFile(input.InstanceName + ".tfstate")
 
 			if err != nil {
@@ -131,13 +140,15 @@ func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error 
 				Var("route_cidr", input.RouteCIDR).
 				Var("instance_type", input.InstanceType).
 				Var("image_id", input.ImageID).
+				Var("key_pair", input.KeyName).
 				PersistStateToFile(input.InstanceName + ".tfstate")
 
 		} else {
 			err = errors.New("Not Found Error: Resource Type")
 			return err
 		}
-
+	} else if input.Cloud == "GCP" { // Platform : Google Cloud Platform
+		/* To Do */
 	} else if input.Cloud == "OpenStack" { // Platform : OpenStack
 		/* To Do */
 	} else if input.Cloud == "VSphere" { // Platform : VSphere
@@ -147,8 +158,8 @@ func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error 
 		return err
 	}
 
-	//terminate := (count == 0)
-	// Apply brings the platform to the desired state.
+	// terminate := (count == 0)
+	// Apply brings the platform to the desired state. (Provision / Destroy)
 	if err := platform.Apply(destroy); err != nil {
 		return err
 	}
