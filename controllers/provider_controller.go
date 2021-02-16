@@ -18,9 +18,7 @@ package controllers
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"context"
 
@@ -71,15 +69,17 @@ func (r *ProviderReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	// your logic here
 	providerName := provider.Name
 	providerCloud := provider.Spec.Cloud
-	// AWS
-	providerAK := provider.Spec.AccessKey
-	providerSK := provider.Spec.SecretKey
 	providerRegion := provider.Spec.Region
+
+	// AWS
+	providerAK := provider.Spec.AWS.AccessKey
+	providerSK := provider.Spec.AWS.SecretKey
+
 	// Azure
-	providerSubID := provider.Spec.SubscriptionID
-	providerClientID := provider.Spec.ClientID
-	providerClientSecret := provider.Spec.ClientSecret
-	providerTenantID := provider.Spec.TenantID
+	providerSubID := provider.Spec.Azure.SubscriptionID
+	providerClientID := provider.Spec.Azure.ClientID
+	providerClientSecret := provider.Spec.Azure.ClientSecret
+	providerTenantID := provider.Spec.Azure.TenantID
 
 	//fileName := strings.ToLower(providerCloud) + "-provider.tf"
 
@@ -99,44 +99,6 @@ func (r *ProviderReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	//terraDir := util.HCL_DIR + "/" + providerName
 
 	return ctrl.Result{}, nil
-}
-
-// deploymentForProvider returns a provider Deployment object
-func (r *ProviderReconciler) deploymentForProvider(m *terraformv1alpha1.Provider) *appsv1.Deployment {
-	ls := labelsForProvider(m.Name)
-	replicas := m.Spec.Size
-
-	dep := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      m.Name,
-			Namespace: m.Namespace,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: ls,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: ls,
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{{
-						Image:   "memcached:1.4.36-alpine",
-						Name:    "memcached",
-						Command: []string{"memcached", "-m=64", "-o", "modern", "-v"},
-						Ports: []corev1.ContainerPort{{
-							ContainerPort: 11211,
-							Name:          "memcached",
-						}},
-					}},
-				},
-			},
-		},
-	}
-	// Set Provider instance as the owner and controller
-	ctrl.SetControllerReference(m, dep, r.Scheme)
-	return dep
 }
 
 // labelsForProvider returns the labels for selecting the resources

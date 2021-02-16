@@ -17,7 +17,6 @@ limitations under the License.
 package controllers
 
 import (
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,30 +38,30 @@ import (
 	"github.com/tmax-cloud/terraform-operator/util"
 )
 
-// NetworkReconciler reconciles a Network object
-type NetworkReconciler struct {
+// ResourceReconciler reconciles a Resource object
+type ResourceReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=terraform.tmax.io,resources=networks,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=terraform.tmax.io,resources=networks/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=terraform.tmax.io,resources=networks/finalizers,verbs=update
+// +kubebuilder:rbac:groups=terraform.tmax.io,resources=resources,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=terraform.tmax.io,resources=resources/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=terraform.tmax.io,resources=resources/finalizers,verbs=update
 
-func (r *NetworkReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *ResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	log := r.Log.WithValues("network", req.NamespacedName)
+	log := r.Log.WithValues("resource", req.NamespacedName)
 
-	// Fetch the Network instance
-	network := &terraformv1alpha1.Network{}
-	err := r.Get(ctx, req.NamespacedName, network)
+	// Fetch the Resource instance
+	network := &terraformv1alpha1.Resource{}
+	err := r.Get(ctx, req.NamespacedName, resource)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			log.Info("Network resource not found. Ignoring since object must be deleted")
+			log.Info("`Resource` resource not found. Ignoring since object must be deleted")
 
 			cm := &corev1.ConfigMap{}
 			err = r.Get(ctx, req.NamespacedName, cm)
@@ -107,11 +106,12 @@ func (r *NetworkReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	// your logic here
 	input := util.TerraVars{}
 
-	input.Namespace = network.Namespace
-	input.NetworkName = network.Name
-	input.VPCCIDR = network.Spec.VPCCIDR
-	input.SubnetCIDR = network.Spec.SubnetCIDR
-	input.RouteCIDR = network.Spec.RouteCIDR
+	input.Namespace = resource.Namespace
+	input.NetworkName = resource.Name
+	input.Type = resource.Spec.Type
+	input.VPCCIDR = resource.Spec.AWS_VPC.CIDR
+	input.SubnetCIDR = resource.Spec.AWS_SUBNET.CIDR
+	input.RouteCIDR = resource.Spec.AWS_ROUTE.CIDR
 
 	fmt.Println("NetworkName:" + input.NetworkName)
 	fmt.Println("VPCCIDR:" + input.VPCCIDR)
@@ -121,7 +121,7 @@ func (r *NetworkReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	// Fetch the "Provider" instance related to "Network" (Network -> Provider)
 	provider := &terraformv1alpha1.Provider{}
-	err = r.Get(ctx, types.NamespacedName{Name: network.Spec.Provider, Namespace: network.Namespace}, provider)
+	err = r.Get(ctx, types.NamespacedName{Name: resource.Spec.Provider, Namespace: resource.Namespace}, provider)
 	if err != nil {
 		// Error reading the object - requeue the request.
 		log.Error(err, "Failed to get Provider")
@@ -157,18 +157,18 @@ func (r *NetworkReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	//terraDir := util.HCL_DIR + "/" + networkProvider
 
 	// Set Provider as the owner and controller in Network CR
-	ctrl.SetControllerReference(provider, network, r.Scheme)
+	ctrl.SetControllerReference(provider, resource, r.Scheme)
 	if err = r.Update(ctx, network); err != nil {
-		log.Error(err, "Failed to update Network field - ownerReferences")
+		log.Error(err, "Failed to update Resource field - ownerReferences")
 		return ctrl.Result{}, err
 	}
 
 	// Check if the configmap already exists, if not create a new one
 	cmList := &corev1.ConfigMap{}
-	err = r.Get(ctx, types.NamespacedName{Name: network.Name, Namespace: network.Namespace}, cmList)
+	err = r.Get(ctx, types.NamespacedName{Name: resource.Name, Namespace: resource.Namespace}, cmList)
 	if err != nil && errors.IsNotFound(err) {
 		// Define a new ConfigMap
-		cm := r.configmapForNetwork(network, input)
+		cm := r.configmapForResource(resource, input)
 		log.Info("Creating a new Configmap", "Configmap.Namespace", cm.Namespace, "Configmap.Name", cm.Name)
 		err = r.Create(ctx, cm)
 		if err != nil {
@@ -212,8 +212,8 @@ func (r *NetworkReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
-// configmapForNetwork returns a network ConfigMap object
-func (r *NetworkReconciler) configmapForNetwork(m *terraformv1alpha1.Network, input util.TerraVars) *corev1.ConfigMap {
+// configmapForResource returns a Resource ConfigMap object
+func (r *ResourceReconciler) configmapForResource(m *terraformv1alpha1.Resource, input util.TerraVars) *corev1.ConfigMap {
 	configMapData := make(map[string]string, 0)
 
 	e := reflect.ValueOf(&input).Elem()
@@ -237,7 +237,7 @@ func (r *NetworkReconciler) configmapForNetwork(m *terraformv1alpha1.Network, in
 }
 
 // configmapToVars returns a Terraform Variable Struct
-func (r *NetworkReconciler) configmapToVars(cm *corev1.ConfigMap) util.TerraVars {
+func (r *ResourceReconciler) configmapToVars(cm *corev1.ConfigMap) util.TerraVars {
 
 	configMapData := cm.Data
 
@@ -263,15 +263,8 @@ func (r *NetworkReconciler) configmapToVars(cm *corev1.ConfigMap) util.TerraVars
 	return output
 }
 
-// labelsForNetwork returns the labels for selecting the resources
-// belonging to the given Network CR name.
-func labelsForNetwork(name string) map[string]string {
-	return map[string]string{"app": "network", "network_cr": name}
-}
-
-func (r *NetworkReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&terraformv1alpha1.Network{}).
-		Owns(&appsv1.Deployment{}).
+		For(&terraformv1alpha1.Resource{}).
 		Complete(r)
 }

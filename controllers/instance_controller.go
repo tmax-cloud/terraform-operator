@@ -80,6 +80,7 @@ func (r *InstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 				return ctrl.Result{}, err
 			}
 
+			// Recover "Instance" Data using ConfigMap
 			input := r.configmapToVars(cm)
 
 			// Destroy the Provisioned Resources for Deleted Object (Network)
@@ -107,6 +108,7 @@ func (r *InstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	// your logic here
 	input := util.TerraVars{}
 
+	input.Namespace = instance.Namespace
 	input.InstanceName = instance.Name
 	input.InstanceType = instance.Spec.Type
 	input.ImageID = instance.Spec.Image
@@ -150,15 +152,17 @@ func (r *InstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	input.ProviderName = provider.Name
 	input.Cloud = provider.Spec.Cloud
-	// AWS
-	input.AccessKey = provider.Spec.AccessKey
-	input.SecretKey = provider.Spec.SecretKey
 	input.Region = provider.Spec.Region
+
+	// AWS
+	input.AccessKey = provider.Spec.AWS.AccessKey
+	input.SecretKey = provider.Spec.AWS.SecretKey
+
 	// Azure
-	input.SubscriptionID = provider.Spec.SubscriptionID
-	input.ClientID = provider.Spec.ClientID
-	input.ClientSecret = provider.Spec.ClientSecret
-	input.TenantID = provider.Spec.TenantID
+	input.SubscriptionID = provider.Spec.Azure.SubscriptionID
+	input.ClientID = provider.Spec.Azure.ClientID
+	input.ClientSecret = provider.Spec.Azure.ClientSecret
+	input.TenantID = provider.Spec.Azure.TenantID
 
 	fmt.Println("ProviderName:" + input.ProviderName)
 	fmt.Println("Cloud:" + input.Cloud)
@@ -298,6 +302,8 @@ func (r *InstanceReconciler) configmapToVars(cm *corev1.ConfigMap) util.TerraVar
 	configMapData := cm.Data
 
 	output := util.TerraVars{
+		Namespace: configMapData["Namespace"],
+
 		ProviderName:   configMapData["ProviderName"],
 		Cloud:          configMapData["Cloud"],
 		AccessKey:      configMapData["AccessKey"],

@@ -17,6 +17,10 @@ import (
 
 // Terraform HCL Input Parameters Structure
 type TerraVars struct {
+	/* Common */
+	Namespace string
+	Type      string
+
 	/* Provider */
 	ProviderName string
 	Cloud        string
@@ -55,6 +59,8 @@ func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error 
 		AddProvider("aws", aws.Provider()).					// Provider 추가 (e.g. AWS, Azure, TLS 등)
 		Var("access_key", input.AccessKey).					// HCL 코드 내 변수 설정
 		PersistStateToFile(input.NetworkName + ".tfstate") 	// Terraform State File 설정
+		...
+		platform.Apply(destroy) 							// 설정된 Context 내용 기반으로 클라우드 리소스 생성/삭제 수행
 	*/
 
 	// Define the platform corrensponding to Cloud - Resource type
@@ -71,7 +77,7 @@ func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error 
 				Var("vpc_cidr", input.VPCCIDR).
 				Var("subnet_cidr", input.SubnetCIDR).
 				Var("route_cidr", input.RouteCIDR).
-				PersistStateToFile(input.NetworkName + ".tfstate")
+				PersistStateToFile(input.Namespace + "-" + input.NetworkName + ".tfstate")
 
 			if err != nil {
 				return err
@@ -93,7 +99,7 @@ func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error 
 				Var("instance_type", input.InstanceType).
 				Var("image_id", input.ImageID).
 				Var("key_pair", input.KeyName).
-				PersistStateToFile(input.InstanceName + ".tfstate")
+				PersistStateToFile(input.Namespace + "-" + input.InstanceName + ".tfstate")
 
 			if err != nil {
 				return err
@@ -117,7 +123,7 @@ func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error 
 				Var("vpc_cidr", input.VPCCIDR).
 				Var("subnet_cidr", input.SubnetCIDR).
 				Var("route_cidr", input.RouteCIDR).
-				PersistStateToFile(input.NetworkName + ".tfstate")
+				PersistStateToFile(input.Namespace + "-" + input.NetworkName + ".tfstate")
 
 			if err != nil {
 				return err
@@ -141,7 +147,7 @@ func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error 
 				Var("instance_type", input.InstanceType).
 				Var("image_id", input.ImageID).
 				Var("key_pair", input.KeyName).
-				PersistStateToFile(input.InstanceName + ".tfstate")
+				PersistStateToFile(input.Namespace + "-" + input.InstanceName + ".tfstate")
 
 		} else {
 			err = errors.New("Not Found Error: Resource Type")

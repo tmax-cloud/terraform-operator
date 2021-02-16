@@ -15,7 +15,7 @@ provider "aws" {
 	secret_key = "${var.secret_key}"
 	region     = "${var.region}"
 }
-	`
+`
 
 	AWS_NETWORK_TEMPLATE = `
 variable "vpc_cidr" {}
@@ -106,6 +106,81 @@ output "{{NET_NAME}}-subnet-c-id" {
 	
 output "{{NET_NAME}}-sg-id" {
 	value = "${aws_security_group.{{NET_NAME}}-sg.id}"
+}
+`
+
+	AWS_VPC_TEMPLATE = `
+variable "vpc_cidr" {}
+
+
+# Configure the VPC-Subnet
+resource "aws_vpc" "{{NET_NAME}}-vpc" {
+	cidr_block = "${var.vpc_cidr}"
+	tags = {
+		Name = "{{NET_NAME}}-vpc"
+	}
+}
+`
+	AWS_SUBNET_TEMPLATE = `
+variable "subnet_cidr" {}
+variable "zone" { default = "a" }
+
+resource "aws_subnet" "{{NET_NAME}}-subnet-c" {
+	vpc_id = "${aws_vpc.{{NET_NAME}}-vpc.id}"
+	cidr_block = "${var.subnet_cidr}"
+	availability_zone = "${var.region}${zone}"
+}
+`
+
+	AWS_GATEWAY_TEMPLATE = `
+# Configure the Gateway
+resource "aws_internet_gateway" "{{NET_NAME}}-gateway" {
+	vpc_id = "${aws_vpc.{{NET_NAME}}-vpc.id}"
+	tags = {
+		Name = "{{NET_NAME}}-gateway"
+	}
+}
+`
+	AWS_ROUTE_TEMPLATE = `
+variable "route_cidr" {}
+
+# Configure the Routes
+resource "aws_route_table" "{{NET_NAME}}-route-table" {
+	vpc_id = "${aws_vpc.{{NET_NAME}}-vpc.id}"
+	route {
+		cidr_block = "${var.route_cidr}"
+		gateway_id = "${aws_internet_gateway.{{NET_NAME}}-gateway.id}"
+	}
+	tags = {
+		Name = "{{NET_NAME}}-route-table"
+	}
+}
+
+resource "aws_route_table_association" "{{NET_NAME}}-subnet-association" {
+	subnet_id      = "${aws_subnet.{{NET_NAME}}-subnet-c.id}"
+	route_table_id = "${aws_route_table.{{NET_NAME}}-route-table.id}"
+}
+`
+
+	AWS_SECURITY_GROUP_TEMPLATE = `
+# Configure the Security Group
+resource "aws_security_group" "{{NET_NAME}}-sg" {
+	vpc_id      = "${aws_vpc.{{NET_NAME}}-vpc.id}"
+	name        = "{{NET_NAME}}-sg"
+	description = "This security group is for kubernetes"
+	tags = { Name = "{{NET_NAME}}-sg" }
+}
+`
+
+	AWS_SECURITY_GROUP_RULE = `
+resource "aws_security_group_rule" "kube-cluster-traffic" {
+	type              = "ingress"
+	from_port         = 0
+	to_port           = 0
+	protocol = "-1"
+	cidr_blocks       = ["10.0.0.0/16"]
+	security_group_id = "${aws_security_group.{{NET_NAME}}-sg.id}"
+	lifecycle { create_before_destroy = true }
 }
 `
 

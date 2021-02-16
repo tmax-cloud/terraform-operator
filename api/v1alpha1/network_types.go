@@ -29,7 +29,6 @@ type NetworkSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of Network. Edit Network_types.go to remove/update
-	Size       int32  `json:"size,omitempty"`
 	Provider   string `json:"provider,omitempty"`
 	VPCCIDR    string `json:"vpccidr,omitempty"`
 	SubnetCIDR string `json:"subnetcidr,omitempty"`

@@ -5,4 +5,5 @@ resources:
 - terraform_v1alpha1_network.yaml
 - terraform_v1alpha1_storage.yaml
 - terraform_v1alpha1_security.yaml
+- terraform_v1alpha1_resource.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

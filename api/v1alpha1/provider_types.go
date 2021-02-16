@@ -29,11 +29,26 @@ type ProviderSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of Provider. Edit Provider_types.go to remove/update
-	Size           int32  `json:"size,omitempty"`
-	Cloud          string `json:"cloud,omitempty"`
-	AccessKey      string `json:"accesskey,omitempty"`
-	SecretKey      string `json:"secretkey,omitempty"`
-	Region         string `json:"region,omitempty"`
+	Cloud  string    `json:"cloud,omitempty"`
+	Region string    `json:"region,omitempty"`
+	AWS    AWSSpec   `json:"aws,omitempty"`
+	Azure  AzureSpec `json:"azure,omitempty"`
+	/*
+		AccessKey      string `json:"accesskey,omitempty"`
+		SecretKey      string `json:"secretkey,omitempty"`
+		SubscriptionID string `json:"subscriptionid,omitempty"`
+		ClientID       string `json:"clientid,omitempty"`
+		ClientSecret   string `json:"clientsecret,omitempty"`
+		TenantID       string `json:"tenantid,omitempty"`
+	*/
+}
+
+type AWSSpec struct {
+	AccessKey string `json:"accesskey,omitempty"`
+	SecretKey string `json:"secretkey,omitempty"`
+}
+
+type AzureSpec struct {
 	SubscriptionID string `json:"subscriptionid,omitempty"`
 	ClientID       string `json:"clientid,omitempty"`
 	ClientSecret   string `json:"clientsecret,omitempty"`

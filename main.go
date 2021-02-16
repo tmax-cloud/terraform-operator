@@ -107,6 +107,14 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Security")
 		os.Exit(1)
 	}
+	if err = (&controllers.ResourceReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("Resource"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Resource")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting manager")
