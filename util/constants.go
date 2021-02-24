@@ -206,6 +206,8 @@ resource "aws_instance" "{{INS_NAME}}" {
 `
 
 	AWS_KEY_TEMPLATE = `
+variable "key_pair" {default = "aws-key"}
+
 resource "tls_private_key" "example" {
 	algorithm = "RSA"
 	rsa_bits  = 4096

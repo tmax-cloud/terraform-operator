@@ -21,6 +21,30 @@ resources:
 - group: terraform
   kind: Resource
   version: v1alpha1
+- group: terraform
+  kind: AWSVPC
+  version: v1alpha1
+- group: terraform
+  kind: AWSSubnet
+  version: v1alpha1
+- group: terraform
+  kind: AWSGateway
+  version: v1alpha1
+- group: terraform
+  kind: AWSRoute
+  version: v1alpha1
+- group: terraform
+  kind: AWSSecurityGroup
+  version: v1alpha1
+- group: terraform
+  kind: AWSSecurityGroupRule
+  version: v1alpha1
+- group: terraform
+  kind: AWSInstance
+  version: v1alpha1
+- group: terraform
+  kind: AWSKey
+  version: v1alpha1
 version: 3-alpha
 plugins:
   go.sdk.operatorframework.io/v2-alpha: {}

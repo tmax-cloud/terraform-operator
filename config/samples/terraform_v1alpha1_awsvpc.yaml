@@ -1,0 +1,7 @@
+apiVersion: terraform.tmax.io/v1alpha1
+kind: AWSVPC
+metadata:
+  name: awsvpc-sample
+spec:
+  # Add fields here
+  foo: bar

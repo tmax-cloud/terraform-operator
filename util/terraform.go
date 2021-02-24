@@ -19,6 +19,7 @@ import (
 type TerraVars struct {
 	/* Common */
 	Namespace string
+	Name      string
 	Type      string
 
 	/* Provider */
@@ -77,7 +78,7 @@ func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error 
 				Var("vpc_cidr", input.VPCCIDR).
 				Var("subnet_cidr", input.SubnetCIDR).
 				Var("route_cidr", input.RouteCIDR).
-				PersistStateToFile(input.Namespace + "-" + input.NetworkName + ".tfstate")
+				PersistStateToFile(input.Namespace + "-" + input.ProviderName + ".tfstate")
 
 			if err != nil {
 				return err
@@ -99,7 +100,7 @@ func ExecuteTerraform(input TerraVars, resourceType string, destroy bool) error 
 				Var("instance_type", input.InstanceType).
 				Var("image_id", input.ImageID).
 				Var("key_pair", input.KeyName).
-				PersistStateToFile(input.Namespace + "-" + input.InstanceName + ".tfstate")
+				PersistStateToFile(input.Namespace + "-" + input.ProviderName + ".tfstate")
 
 			if err != nil {
 				return err

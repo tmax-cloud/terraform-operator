@@ -1,0 +1,24 @@
+# permissions for end users to edit awsvpcs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: awsvpc-editor-role
+rules:
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awsvpcs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awsvpcs/status
+  verbs:
+  - get

@@ -1,0 +1,20 @@
+# permissions for end users to view awssubnets.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: awssubnet-viewer-role
+rules:
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awssubnets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awssubnets/status
+  verbs:
+  - get

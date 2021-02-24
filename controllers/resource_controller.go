@@ -54,7 +54,7 @@ func (r *ResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("resource", req.NamespacedName)
 
 	// Fetch the Resource instance
-	network := &terraformv1alpha1.Resource{}
+	resource := &terraformv1alpha1.Resource{}
 	err := r.Get(ctx, req.NamespacedName, resource)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -84,7 +84,7 @@ func (r *ResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			// Destroy the Provisioned Resources for Deleted Object (Network)
 			//err = util.ExecuteTerraform_CLI(util.HCL_DIR, isDestroy)
 			destroy := true
-			err = util.ExecuteTerraform(input, "NETWORK", destroy)
+			err = util.ExecuteTerraform(input, input.Type, destroy)
 			if err != nil {
 				log.Error(err, "Terraform Destroy Error")
 				return ctrl.Result{}, err
@@ -104,20 +104,21 @@ func (r *ResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	// your logic here
+
 	input := util.TerraVars{}
 
 	input.Namespace = resource.Namespace
-	input.NetworkName = resource.Name
+	input.Name = resource.Name
 	input.Type = resource.Spec.Type
 	input.VPCCIDR = resource.Spec.AWS_VPC.CIDR
 	input.SubnetCIDR = resource.Spec.AWS_SUBNET.CIDR
 	input.RouteCIDR = resource.Spec.AWS_ROUTE.CIDR
 
-	fmt.Println("NetworkName:" + input.NetworkName)
+	fmt.Println("Name:" + input.Name)
 	fmt.Println("VPCCIDR:" + input.VPCCIDR)
 	fmt.Println("SubnetCIDR:" + input.SubnetCIDR)
 	fmt.Println("RouteCIDR:" + input.RouteCIDR)
-	fmt.Println("NetworkProvider:" + network.Spec.Provider)
+	fmt.Println("Provider:" + resource.Spec.Provider)
 
 	// Fetch the "Provider" instance related to "Network" (Network -> Provider)
 	provider := &terraformv1alpha1.Provider{}
@@ -153,12 +154,9 @@ func (r *ResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	fmt.Println("ClietnSecret:" + input.ClientSecret)
 	fmt.Println("TenantID:" + input.TenantID)
 
-	//fileName := strings.ToLower(providerCloud) + "-network.tf"
-	//terraDir := util.HCL_DIR + "/" + networkProvider
-
-	// Set Provider as the owner and controller in Network CR
+	// Set Provider as the owner and controller in Resource CR
 	ctrl.SetControllerReference(provider, resource, r.Scheme)
-	if err = r.Update(ctx, network); err != nil {
+	if err = r.Update(ctx, resource); err != nil {
 		log.Error(err, "Failed to update Resource field - ownerReferences")
 		return ctrl.Result{}, err
 	}
@@ -182,18 +180,18 @@ func (r *ResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
-	// Provision the Network Resource by Terraform. It'll skip
+	// Provision the Resource Resource by Terraform. It'll skip
 	// when `Phase` is `provisioned`.
-	if network.Status.Phase != "provisioned" {
-		err = util.ExecuteTerraform(input, "NETWORK", false)
+	if resource.Status.Phase != "provisioned" {
+		err = util.ExecuteTerraform(input, input.Type, false)
 	}
 
 	// Set 'Phase' Status depending on the result of 'ExecuteTerraform'
 	if err != nil {
-		network.Status.Phase = "error"
-		tErr := r.Status().Update(ctx, network)
+		resource.Status.Phase = "error"
+		tErr := r.Status().Update(ctx, resource)
 		if tErr != nil {
-			log.Error(err, "Failed to update Network Status")
+			log.Error(err, "Failed to update Resource Status")
 			return ctrl.Result{}, tErr
 		}
 		if err != nil {
@@ -201,10 +199,10 @@ func (r *ResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			return ctrl.Result{}, err
 		}
 	} else {
-		network.Status.Phase = "provisioned"
-		tErr := r.Status().Update(ctx, network)
+		resource.Status.Phase = "provisioned"
+		tErr := r.Status().Update(ctx, resource)
 		if tErr != nil {
-			log.Error(tErr, "Failed to update Network Status")
+			log.Error(tErr, "Failed to update Resource Status")
 			return ctrl.Result{}, tErr
 		}
 	}
