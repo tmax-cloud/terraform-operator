@@ -84,7 +84,7 @@ func (r *ResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			// Destroy the Provisioned Resources for Deleted Object (Network)
 			//err = util.ExecuteTerraform_CLI(util.HCL_DIR, isDestroy)
 			destroy := true
-			err = util.ExecuteTerraform(input, input.Type, destroy)
+			err = util.ExecuteTerraform(input, destroy)
 			if err != nil {
 				log.Error(err, "Terraform Destroy Error")
 				return ctrl.Result{}, err
@@ -183,7 +183,7 @@ func (r *ResourceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	// Provision the Resource Resource by Terraform. It'll skip
 	// when `Phase` is `provisioned`.
 	if resource.Status.Phase != "provisioned" {
-		err = util.ExecuteTerraform(input, input.Type, false)
+		err = util.ExecuteTerraform(input, false)
 	}
 
 	// Set 'Phase' Status depending on the result of 'ExecuteTerraform'
