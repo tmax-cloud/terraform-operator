@@ -101,17 +101,14 @@ func (r *AWSRouteReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	input := util.TerraVars{}
 
-	input.Namespace = resource.Namespace
 	input.Name = resource.Name
+	input.Namespace = resource.Namespace
+	input.RouteName = resource.Name
 	input.Type = resource.Kind
 	input.RouteCIDR = resource.Spec.CIDR
 	input.VPCName = resource.Spec.VPC
 	input.SubnetName = resource.Spec.Subnet
 	input.GatewayName = resource.Spec.Gateway
-
-	fmt.Println("Name:" + input.Name)
-	fmt.Println("RouteCIDR:" + input.RouteCIDR)
-	fmt.Println("Provider:" + resource.Spec.Provider)
 
 	// Fetch the "Provider" instance related to "Resource" (Resource -> Provider)
 	provider := &terraformv1alpha1.Provider{}

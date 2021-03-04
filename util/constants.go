@@ -112,12 +112,11 @@ output "{{NET_NAME}}-sg-id" {
 	AWS_VPC_TEMPLATE = `
 variable "vpc_cidr" {}
 
-
 # Configure the VPC-Subnet
-resource "aws_vpc" "{{NET_NAME}}-vpc" {
+resource "aws_vpc" "{{VPC_NAME}}" {
 	cidr_block = "${var.vpc_cidr}"
 	tags = {
-		Name = "{{NET_NAME}}-vpc"
+		Name = "{{VPC_NAME}}"
 	}
 }
 `
@@ -125,8 +124,8 @@ resource "aws_vpc" "{{NET_NAME}}-vpc" {
 variable "subnet_cidr" {}
 variable "zone" { default = "a" }
 
-resource "aws_subnet" "{{NET_NAME}}-subnet-c" {
-	vpc_id = "${aws_vpc.{{NET_NAME}}-vpc.id}"
+resource "aws_subnet" "{{SUBNET_NAME}}" {
+	vpc_id = "${aws_vpc.{{VPC_NAME}}.id}"
 	cidr_block = "${var.subnet_cidr}"
 	availability_zone = "${var.region}${zone}"
 }
@@ -134,10 +133,10 @@ resource "aws_subnet" "{{NET_NAME}}-subnet-c" {
 
 	AWS_GATEWAY_TEMPLATE = `
 # Configure the Gateway
-resource "aws_internet_gateway" "{{NET_NAME}}-gateway" {
-	vpc_id = "${aws_vpc.{{NET_NAME}}-vpc.id}"
+resource "aws_internet_gateway" "{{GATEWAY_NAME}}" {
+	vpc_id = "${aws_vpc.{{VPC_NAME}}.id}"
 	tags = {
-		Name = "{{NET_NAME}}-gateway"
+		Name = "{{GATEWAY_NAME}}"
 	}
 }
 `
@@ -145,64 +144,43 @@ resource "aws_internet_gateway" "{{NET_NAME}}-gateway" {
 variable "route_cidr" {}
 
 # Configure the Routes
-resource "aws_route_table" "{{NET_NAME}}-route-table" {
-	vpc_id = "${aws_vpc.{{NET_NAME}}-vpc.id}"
+resource "aws_route_table" "{{ROUTE_NAME}}" {
+	vpc_id = "${aws_vpc.{{VPC_NAME}}.id}"
 	route {
 		cidr_block = "${var.route_cidr}"
-		gateway_id = "${aws_internet_gateway.{{NET_NAME}}-gateway.id}"
+		gateway_id = "${aws_internet_gateway.{{GATEWAY_NAME}}.id}"
 	}
 	tags = {
-		Name = "{{NET_NAME}}-route-table"
+		Name = "{{ROUTE_NAME}}"
 	}
 }
 
-resource "aws_route_table_association" "{{NET_NAME}}-subnet-association" {
-	subnet_id      = "${aws_subnet.{{NET_NAME}}-subnet-c.id}"
-	route_table_id = "${aws_route_table.{{NET_NAME}}-route-table.id}"
+resource "aws_route_table_association" "{{ROUTE_NAME}}" {
+	subnet_id      = "${aws_subnet.{{SUBNET_NAME}}.id}"
+	route_table_id = "${aws_route_table.{{ROUTE_NAME}}.id}"
 }
 `
 
 	AWS_SECURITY_GROUP_TEMPLATE = `
 # Configure the Security Group
-resource "aws_security_group" "{{NET_NAME}}-sg" {
-	vpc_id      = "${aws_vpc.{{NET_NAME}}-vpc.id}"
-	name        = "{{NET_NAME}}-sg"
+resource "aws_security_group" "{{SG_NAME}}" {
+	vpc_id      = "${aws_vpc.{{VPC_NAME}}.id}"
+	name        = "{{SG_NAME}}"
 	description = "This security group is for kubernetes"
-	tags = { Name = "{{NET_NAME}}-sg" }
+	tags = { Name = "{{SG_NAME}}" }
 }
 `
 
-	AWS_SECURITY_GROUP_RULE = `
-resource "aws_security_group_rule" "kube-cluster-traffic" {
+	AWS_SECURITY_GROUP_RULE_TEMPLATE = `
+resource "aws_security_group_rule" "{{SG_RULE_NAME}}" {
 	type              = "ingress"
 	from_port         = 0
 	to_port           = 0
 	protocol = "-1"
 	cidr_blocks       = ["10.0.0.0/16"]
-	security_group_id = "${aws_security_group.{{NET_NAME}}-sg.id}"
+	security_group_id = "${aws_security_group.{{SG_NAME}}.id}"
 	lifecycle { create_before_destroy = true }
 }
-`
-
-	AWS_INSTANCE_TEMPLATE = `
-variable "key_pair" {default = "aws-key"}
-variable "instance_type" {}
-variable "image_id" {}
-	
-resource "aws_instance" "{{INS_NAME}}" {
-	ami = "${var.image_id}"
-	instance_type = "${var.instance_type}"
-	subnet_id = "${aws_subnet.{{NET_NAME}}-subnet-c.id}"
-	vpc_security_group_ids = [
-		"${aws_security_group.{{NET_NAME}}-sg.id}"
-	]
-	key_name = "${var.key_pair}"
-	count = 1
-	tags = {
-		Name = "{{INS_NAME}}"
-	}
-	associate_public_ip_address = true
-} 
 `
 
 	AWS_KEY_TEMPLATE = `
@@ -213,10 +191,31 @@ resource "tls_private_key" "example" {
 	rsa_bits  = 4096
 }
 	
-resource "aws_key_pair" "terraform-key" {
+resource "aws_key_pair" "{{KEY_NAME}}" {
 	key_name = "${var.key_pair}"
 	public_key = "${tls_private_key.example.public_key_openssh}"
 }	  
+`
+
+	AWS_INSTANCE_TEMPLATE = `
+variable "key_pair" {default = "aws-key"}
+variable "instance_type" {}
+variable "image_id" {}
+	
+resource "aws_instance" "{{INS_NAME}}" {
+	ami = "${var.image_id}"
+	instance_type = "${var.instance_type}"
+	subnet_id = "${aws_subnet.{{SUBNET_NAME}}.id}"
+	vpc_security_group_ids = [
+		"${aws_security_group.{{SG_NAME}}.id}"
+	]
+	key_name = "${var.key_pair}"
+	count = 1
+	tags = {
+		Name = "{{INS_NAME}}"
+	}
+	associate_public_ip_address = true
+} 
 `
 	/*
 			AWS_INSTANCE_TEMPLATE = `

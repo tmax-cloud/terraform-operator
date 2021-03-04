@@ -101,8 +101,9 @@ func (r *AWSSecurityGroupRuleReconciler) Reconcile(req ctrl.Request) (ctrl.Resul
 
 	input := util.TerraVars{}
 
-	input.Namespace = resource.Namespace
 	input.Name = resource.Name
+	input.Namespace = resource.Namespace
+	input.SGRuleName = resource.Name
 	input.Type = resource.Kind
 
 	input.SGType = resource.Spec.Type

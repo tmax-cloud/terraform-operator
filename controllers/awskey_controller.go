@@ -101,12 +101,10 @@ func (r *AWSKeyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	input := util.TerraVars{}
 
-	input.Namespace = resource.Namespace
 	input.Name = resource.Name
+	input.Namespace = resource.Namespace
+	input.KeyName = resource.Name
 	input.Type = resource.Kind
-
-	fmt.Println("Name:" + input.Name)
-	fmt.Println("Provider:" + resource.Spec.Provider)
 
 	// Fetch the "Provider" instance related to "Resource" (Resource -> Provider)
 	provider := &terraformv1alpha1.Provider{}

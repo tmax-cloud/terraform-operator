@@ -101,16 +101,15 @@ func (r *AWSInstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 
 	input := util.TerraVars{}
 
-	input.Namespace = resource.Namespace
 	input.Name = resource.Name
+	input.Namespace = resource.Namespace
 	input.Type = resource.Kind
 	input.InstanceName = resource.Name
 	input.InstanceType = resource.Spec.Type
 	input.ImageID = resource.Spec.Image
 	input.KeyName = resource.Spec.Key
-
-	fmt.Println("Name:" + input.Name)
-	fmt.Println("Provider:" + resource.Spec.Provider)
+	input.SGName = resource.Spec.SG
+	input.SubnetName = resource.Spec.Subnet
 
 	// Fetch the "Provider" instance related to "Resource" (Resource -> Provider)
 	provider := &terraformv1alpha1.Provider{}

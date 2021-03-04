@@ -31,6 +31,7 @@ type AWSInstanceSpec struct {
 	// Foo is an example field of AWSInstance. Edit AWSInstance_types.go to remove/update
 	Provider string `json:"provider,omitempty"`
 	Subnet   string `json:"subnet,omitempty"`
+	SG       string `json:"sg,omitempty"`
 	Image    string `json:"image,omitempty"`
 	Type     string `json:"type,omitempty"`
 	Key      string `json:"key,omitempty"`

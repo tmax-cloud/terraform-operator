@@ -101,13 +101,11 @@ func (r *AWSGatewayReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 
 	input := util.TerraVars{}
 
-	input.Namespace = resource.Namespace
 	input.Name = resource.Name
+	input.Namespace = resource.Namespace
+	input.GatewayName = resource.Name
 	input.Type = resource.Kind
 	input.VPCName = resource.Spec.VPC
-
-	fmt.Println("Name:" + input.Name)
-	fmt.Println("Provider:" + resource.Spec.Provider)
 
 	// Fetch the "Provider" instance related to "Resource" (Resource -> Provider)
 	provider := &terraformv1alpha1.Provider{}
