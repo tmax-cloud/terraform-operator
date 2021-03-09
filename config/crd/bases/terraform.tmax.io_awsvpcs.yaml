@@ -6,20 +6,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
-  name: networks.terraform.tmax.io
+  name: awsvpcs.terraform.tmax.io
 spec:
   group: terraform.tmax.io
   names:
-    kind: Network
-    listKind: NetworkList
-    plural: networks
-    singular: network
+    kind: AWSVPC
+    listKind: AWSVPCList
+    plural: awsvpcs
+    singular: awsvpc
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: Network is the Schema for the networks API
+      description: AWSVPC is the Schema for the awsvpcs API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -34,21 +34,17 @@ spec:
         metadata:
           type: object
         spec:
-          description: NetworkSpec defines the desired state of Network
+          description: AWSVPCSpec defines the desired state of AWSVPC
           properties:
+            cidr:
+              type: string
             provider:
-              description: Foo is an example field of Network. Edit Network_types.go
+              description: Foo is an example field of AWSVPC. Edit AWSVPC_types.go
                 to remove/update
-              type: string
-            routecidr:
-              type: string
-            subnetcidr:
-              type: string
-            vpccidr:
               type: string
           type: object
         status:
-          description: NetworkStatus defines the observed state of Network
+          description: AWSVPCStatus defines the observed state of AWSVPC
           properties:
             nodes:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state

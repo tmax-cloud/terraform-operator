@@ -6,20 +6,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
-  name: providers.terraform.tmax.io
+  name: resources.terraform.tmax.io
 spec:
   group: terraform.tmax.io
   names:
-    kind: Provider
-    listKind: ProviderList
-    plural: providers
-    singular: provider
+    kind: Resource
+    listKind: ResourceList
+    plural: resources
+    singular: resource
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: Provider is the Schema for the providers API
+      description: Resource is the Schema for the resources API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -34,35 +34,79 @@ spec:
         metadata:
           type: object
         spec:
-          description: ProviderSpec defines the desired state of Provider
+          description: ResourceSpec defines the desired state of Resource
           properties:
-            aws:
+            aws_gateway:
               properties:
-                accesskey:
+                name:
                   type: string
-                secretkey:
+                vpc:
                   type: string
               type: object
-            azure:
+            aws_route:
               properties:
-                clientid:
+                cidr:
                   type: string
-                clientsecret:
+                gateway:
                   type: string
-                subscriptionid:
+                name:
                   type: string
-                tenantid:
+                subnet:
+                  type: string
+                vpc:
                   type: string
               type: object
-            cloud:
-              description: Foo is an example field of Provider. Edit Provider_types.go
+            aws_sg:
+              properties:
+                name:
+                  type: string
+                vpc:
+                  type: string
+              type: object
+            aws_sg_rule:
+              properties:
+                cidr:
+                  type: string
+                fromport:
+                  type: string
+                name:
+                  type: string
+                protocol:
+                  type: string
+                sg:
+                  type: string
+                toport:
+                  type: string
+                type:
+                  type: string
+              type: object
+            aws_subnet:
+              properties:
+                cidr:
+                  type: string
+                name:
+                  type: string
+                vpc:
+                  type: string
+                zone:
+                  type: string
+              type: object
+            aws_vpc:
+              properties:
+                cidr:
+                  type: string
+                name:
+                  type: string
+              type: object
+            provider:
+              description: Foo is an example field of Resource. Edit Resource_types.go
                 to remove/update
               type: string
-            region:
+            type:
               type: string
           type: object
         status:
-          description: ProviderStatus defines the observed state of Provider
+          description: ResourceStatus defines the observed state of Resource
           properties:
             nodes:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state

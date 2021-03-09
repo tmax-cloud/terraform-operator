@@ -40,6 +40,214 @@ rules:
 - apiGroups:
   - terraform.tmax.io
   resources:
+  - awsgateways
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awsgateways/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awsgateways/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awsinstances
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awsinstances/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awsinstances/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awskeys
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awskeys/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awskeys/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awsroutes
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awsroutes/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awsroutes/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awssecuritygrouprules
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awssecuritygrouprules/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awssecuritygrouprules/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awssecuritygroups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awssecuritygroups/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awssecuritygroups/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awssubnets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awssubnets/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awssubnets/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awsvpcs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awsvpcs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - awsvpcs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
   - instances
   verbs:
   - create
@@ -111,6 +319,32 @@ rules:
   - terraform.tmax.io
   resources:
   - providers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - resources
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - resources/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - resources/status
   verbs:
   - get
   - patch

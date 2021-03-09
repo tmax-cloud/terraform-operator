@@ -6,20 +6,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
-  name: networks.terraform.tmax.io
+  name: awsroutes.terraform.tmax.io
 spec:
   group: terraform.tmax.io
   names:
-    kind: Network
-    listKind: NetworkList
-    plural: networks
-    singular: network
+    kind: AWSRoute
+    listKind: AWSRouteList
+    plural: awsroutes
+    singular: awsroute
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: Network is the Schema for the networks API
+      description: AWSRoute is the Schema for the awsroutes API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -34,21 +34,23 @@ spec:
         metadata:
           type: object
         spec:
-          description: NetworkSpec defines the desired state of Network
+          description: AWSRouteSpec defines the desired state of AWSRoute
           properties:
+            cidr:
+              type: string
+            gateway:
+              type: string
             provider:
-              description: Foo is an example field of Network. Edit Network_types.go
+              description: Foo is an example field of AWSRoute. Edit AWSRoute_types.go
                 to remove/update
               type: string
-            routecidr:
+            subnet:
               type: string
-            subnetcidr:
-              type: string
-            vpccidr:
+            vpc:
               type: string
           type: object
         status:
-          description: NetworkStatus defines the observed state of Network
+          description: AWSRouteStatus defines the observed state of AWSRoute
           properties:
             nodes:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state

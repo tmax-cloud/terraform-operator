@@ -6,20 +6,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
-  name: networks.terraform.tmax.io
+  name: awssubnets.terraform.tmax.io
 spec:
   group: terraform.tmax.io
   names:
-    kind: Network
-    listKind: NetworkList
-    plural: networks
-    singular: network
+    kind: AWSSubnet
+    listKind: AWSSubnetList
+    plural: awssubnets
+    singular: awssubnet
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: Network is the Schema for the networks API
+      description: AWSSubnet is the Schema for the awssubnets API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -34,21 +34,21 @@ spec:
         metadata:
           type: object
         spec:
-          description: NetworkSpec defines the desired state of Network
+          description: AWSSubnetSpec defines the desired state of AWSSubnet
           properties:
+            cidr:
+              type: string
             provider:
-              description: Foo is an example field of Network. Edit Network_types.go
+              description: Foo is an example field of AWSSubnet. Edit AWSSubnet_types.go
                 to remove/update
               type: string
-            routecidr:
+            vpc:
               type: string
-            subnetcidr:
-              type: string
-            vpccidr:
+            zone:
               type: string
           type: object
         status:
-          description: NetworkStatus defines the observed state of Network
+          description: AWSSubnetStatus defines the observed state of AWSSubnet
           properties:
             nodes:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state

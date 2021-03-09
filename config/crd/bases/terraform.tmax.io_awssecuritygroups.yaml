@@ -6,20 +6,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
-  name: networks.terraform.tmax.io
+  name: awssecuritygroups.terraform.tmax.io
 spec:
   group: terraform.tmax.io
   names:
-    kind: Network
-    listKind: NetworkList
-    plural: networks
-    singular: network
+    kind: AWSSecurityGroup
+    listKind: AWSSecurityGroupList
+    plural: awssecuritygroups
+    singular: awssecuritygroup
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: Network is the Schema for the networks API
+      description: AWSSecurityGroup is the Schema for the awssecuritygroups API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -34,21 +34,17 @@ spec:
         metadata:
           type: object
         spec:
-          description: NetworkSpec defines the desired state of Network
+          description: AWSSecurityGroupSpec defines the desired state of AWSSecurityGroup
           properties:
             provider:
-              description: Foo is an example field of Network. Edit Network_types.go
+              description: Foo is an example field of AWSSecurityGroup. Edit AWSSecurityGroup_types.go
                 to remove/update
               type: string
-            routecidr:
-              type: string
-            subnetcidr:
-              type: string
-            vpccidr:
+            vpc:
               type: string
           type: object
         status:
-          description: NetworkStatus defines the observed state of Network
+          description: AWSSecurityGroupStatus defines the observed state of AWSSecurityGroup
           properties:
             nodes:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state

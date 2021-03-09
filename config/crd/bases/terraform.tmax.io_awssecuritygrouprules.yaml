@@ -6,20 +6,21 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
-  name: networks.terraform.tmax.io
+  name: awssecuritygrouprules.terraform.tmax.io
 spec:
   group: terraform.tmax.io
   names:
-    kind: Network
-    listKind: NetworkList
-    plural: networks
-    singular: network
+    kind: AWSSecurityGroupRule
+    listKind: AWSSecurityGroupRuleList
+    plural: awssecuritygrouprules
+    singular: awssecuritygrouprule
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: Network is the Schema for the networks API
+      description: AWSSecurityGroupRule is the Schema for the awssecuritygrouprules
+        API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -34,21 +35,27 @@ spec:
         metadata:
           type: object
         spec:
-          description: NetworkSpec defines the desired state of Network
+          description: AWSSecurityGroupRuleSpec defines the desired state of AWSSecurityGroupRule
           properties:
+            cidr:
+              type: string
+            fromport:
+              type: string
+            protocol:
+              type: string
             provider:
-              description: Foo is an example field of Network. Edit Network_types.go
+              description: Foo is an example field of AWSSecurityGroupRule. Edit AWSSecurityGroupRule_types.go
                 to remove/update
               type: string
-            routecidr:
+            sg:
               type: string
-            subnetcidr:
+            toport:
               type: string
-            vpccidr:
+            type:
               type: string
           type: object
         status:
-          description: NetworkStatus defines the observed state of Network
+          description: AWSSecurityGroupRuleStatus defines the observed state of AWSSecurityGroupRule
           properties:
             nodes:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
