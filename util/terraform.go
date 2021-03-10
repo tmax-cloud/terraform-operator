@@ -277,6 +277,7 @@ func SearchResourceID(input TerraVars) TerraVars {
 // ReadIDFromFile returns a Cloud Resource ID from Terraform State File
 func ReadIDFromFile(filename string) (string, error) {
 	var matched string // line with id
+	var id string
 
 	input, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -293,7 +294,13 @@ func ReadIDFromFile(filename string) (string, error) {
 	}
 
 	t := strings.Split(matched, "\"")
-	id := t[2]
+
+	if len(t) >= 4 {
+		id = t[3]
+	} else {
+		err = errors.New("Index out of range")
+		return "", err
+	}
 
 	return id, nil
 }
@@ -497,10 +504,11 @@ func ExecuteTerraform(input TerraVars, destroy bool) (string, error) {
 		return "", err
 	}
 
-	if id, err = ReadIDFromFile(filename); err != nil {
-		return "", err
+	if !destroy {
+		if id, err = ReadIDFromFile(filename); err != nil {
+			return "", err
+		}
 	}
-
 	/*
 		if input.Cloud == "AWS" { // Platform : AWS
 			if resourceType == "NETWORK" {

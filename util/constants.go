@@ -127,7 +127,7 @@ variable "zone" { default = "a" }
 resource "aws_subnet" "{{SUBNET_NAME}}" {
 	vpc_id = "{{VPC_ID}}"
 	cidr_block = "${var.subnet_cidr}"
-	availability_zone = "${var.region}${zone}"
+	availability_zone = "${var.region}${var.zone}"
 }
 `
 

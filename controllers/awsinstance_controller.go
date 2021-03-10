@@ -100,6 +100,15 @@ func (r *AWSInstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 
 	// your logic here
 
+	defer func() {
+		if err = r.Update(ctx, resource); err != nil {
+			log.Error(err, "Failed to update Resource")
+		}
+		if err = r.Status().Update(ctx, resource); err != nil {
+			log.Error(err, "Failed to update Resource Status")
+		}
+	}()
+
 	input := util.TerraVars{}
 
 	input.Name = resource.Name
@@ -147,9 +156,8 @@ func (r *AWSInstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	fmt.Println("TenantID:" + input.TenantID)
 
 	// Set Provider as the owner and controller in Resource CR
-	ctrl.SetControllerReference(provider, resource, r.Scheme)
-	if err = r.Update(ctx, resource); err != nil {
-		log.Error(err, "Failed to update Resource field - ownerReferences")
+	if err = ctrl.SetControllerReference(provider, resource, r.Scheme); err != nil {
+		log.Error(err, "Failed to set ownerReferences")
 		return ctrl.Result{}, err
 	}
 
@@ -177,27 +185,12 @@ func (r *AWSInstanceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	// when `Phase` is `provisioned`.
 	if resource.Status.Phase != "provisioned" {
 		id, err = util.ExecuteTerraform(input, false)
-	}
 
-	// Set 'Phase' Status depending on the result of 'ExecuteTerraform'
-	if err != nil {
-		resource.Status.Phase = "error"
-		tErr := r.Status().Update(ctx, resource)
-		if tErr != nil {
-			log.Error(err, "Failed to update Resource Status")
-			return ctrl.Result{}, tErr
-		}
 		if err != nil {
-			log.Error(err, "Terraform Apply Error")
-			return ctrl.Result{}, err
-		}
-	} else {
-		resource.Spec.ID = id
-		resource.Status.Phase = "provisioned"
-		tErr := r.Update(ctx, resource)
-		if tErr != nil {
-			log.Error(tErr, "Failed to update Resource Spec/Status")
-			return ctrl.Result{}, tErr
+			resource.Status.Phase = "error"
+		} else {
+			resource.Status.Phase = "provisioned"
+			resource.Spec.ID = id
 		}
 	}
 

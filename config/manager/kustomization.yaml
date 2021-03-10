@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: 192.168.6.197:5000/terraform-operator
-  newTag: v0.6.6
+  newTag: v0.7.7
