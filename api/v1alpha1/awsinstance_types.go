@@ -32,6 +32,7 @@ type AWSInstanceSpec struct {
 	Provider string `json:"provider,omitempty"`
 	Subnet   string `json:"subnet,omitempty"`
 	SG       string `json:"sg,omitempty"`
+	ID       string `json:"id,omitempty"`
 	Image    string `json:"image,omitempty"`
 	Type     string `json:"type,omitempty"`
 	Key      string `json:"key,omitempty"`

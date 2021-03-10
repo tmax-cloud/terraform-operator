@@ -31,6 +31,7 @@ type AWSGatewaySpec struct {
 	// Foo is an example field of AWSGateway. Edit AWSGateway_types.go to remove/update
 	Provider string `json:"provider,omitempty"`
 	VPC      string `json:"vpc,omitempty"`
+	ID       string `json:"id,omitempty"`
 }
 
 // AWSGatewayStatus defines the observed state of AWSGateway

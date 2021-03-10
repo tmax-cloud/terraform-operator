@@ -125,7 +125,7 @@ variable "subnet_cidr" {}
 variable "zone" { default = "a" }
 
 resource "aws_subnet" "{{SUBNET_NAME}}" {
-	vpc_id = "${aws_vpc.{{VPC_NAME}}.id}"
+	vpc_id = "{{VPC_ID}}"
 	cidr_block = "${var.subnet_cidr}"
 	availability_zone = "${var.region}${zone}"
 }
@@ -134,7 +134,7 @@ resource "aws_subnet" "{{SUBNET_NAME}}" {
 	AWS_GATEWAY_TEMPLATE = `
 # Configure the Gateway
 resource "aws_internet_gateway" "{{GATEWAY_NAME}}" {
-	vpc_id = "${aws_vpc.{{VPC_NAME}}.id}"
+	vpc_id = ""{{VPC_ID}}"
 	tags = {
 		Name = "{{GATEWAY_NAME}}"
 	}
@@ -145,10 +145,10 @@ variable "route_cidr" {}
 
 # Configure the Routes
 resource "aws_route_table" "{{ROUTE_NAME}}" {
-	vpc_id = "${aws_vpc.{{VPC_NAME}}.id}"
+	vpc_id = "{{VPC_ID}}"
 	route {
 		cidr_block = "${var.route_cidr}"
-		gateway_id = "${aws_internet_gateway.{{GATEWAY_NAME}}.id}"
+		gateway_id = "{{GATEWAY_ID}}"
 	}
 	tags = {
 		Name = "{{ROUTE_NAME}}"
@@ -156,15 +156,15 @@ resource "aws_route_table" "{{ROUTE_NAME}}" {
 }
 
 resource "aws_route_table_association" "{{ROUTE_NAME}}" {
-	subnet_id      = "${aws_subnet.{{SUBNET_NAME}}.id}"
-	route_table_id = "${aws_route_table.{{ROUTE_NAME}}.id}"
+	subnet_id      = "{{SUBNET_ID}}"
+	route_table_id = "{{ROUTE_ID}}"
 }
 `
 
 	AWS_SECURITY_GROUP_TEMPLATE = `
 # Configure the Security Group
 resource "aws_security_group" "{{SG_NAME}}" {
-	vpc_id      = "${aws_vpc.{{VPC_NAME}}.id}"
+	vpc_id      = "{{VPC_ID}}"
 	name        = "{{SG_NAME}}"
 	description = "This security group is for kubernetes"
 	tags = { Name = "{{SG_NAME}}" }
@@ -178,7 +178,7 @@ resource "aws_security_group_rule" "{{SG_RULE_NAME}}" {
 	to_port           = 0
 	protocol = "-1"
 	cidr_blocks       = ["10.0.0.0/16"]
-	security_group_id = "${aws_security_group.{{SG_NAME}}.id}"
+	security_group_id = "{{SG_ID}}"
 	lifecycle { create_before_destroy = true }
 }
 `
@@ -205,9 +205,9 @@ variable "image_id" {}
 resource "aws_instance" "{{INS_NAME}}" {
 	ami = "${var.image_id}"
 	instance_type = "${var.instance_type}"
-	subnet_id = "${aws_subnet.{{SUBNET_NAME}}.id}"
+	subnet_id = "{{SUBNET_ID}}"
 	vpc_security_group_ids = [
-		"${aws_security_group.{{SG_NAME}}.id}"
+		"{{SG_ID}}"
 	]
 	key_name = "${var.key_pair}"
 	count = 1

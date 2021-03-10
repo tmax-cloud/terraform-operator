@@ -36,6 +36,8 @@ spec:
         spec:
           description: AWSKeySpec defines the desired state of AWSKey
           properties:
+            id:
+              type: string
             provider:
               description: Foo is an example field of AWSKey. Edit AWSKey_types.go
                 to remove/update

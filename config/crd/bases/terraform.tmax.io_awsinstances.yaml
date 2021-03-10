@@ -36,6 +36,8 @@ spec:
         spec:
           description: AWSInstanceSpec defines the desired state of AWSInstance
           properties:
+            id:
+              type: string
             image:
               type: string
             key:

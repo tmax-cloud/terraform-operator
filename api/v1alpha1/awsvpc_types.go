@@ -30,6 +30,7 @@ type AWSVPCSpec struct {
 
 	// Foo is an example field of AWSVPC. Edit AWSVPC_types.go to remove/update
 	Provider string `json:"provider,omitempty"`
+	ID       string `json:"id,omitempty"`
 	CIDR     string `json:"cidr,omitempty"`
 }
 

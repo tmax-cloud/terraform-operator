@@ -38,6 +38,8 @@ spec:
           properties:
             cidr:
               type: string
+            id:
+              type: string
             provider:
               description: Foo is an example field of AWSSubnet. Edit AWSSubnet_types.go
                 to remove/update

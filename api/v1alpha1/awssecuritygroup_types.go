@@ -31,6 +31,7 @@ type AWSSecurityGroupSpec struct {
 	// Foo is an example field of AWSSecurityGroup. Edit AWSSecurityGroup_types.go to remove/update
 	Provider string `json:"provider,omitempty"`
 	VPC      string `json:"vpc,omitempty"`
+	ID       string `json:"id,omitempty"`
 }
 
 // AWSSecurityGroupStatus defines the observed state of AWSSecurityGroup

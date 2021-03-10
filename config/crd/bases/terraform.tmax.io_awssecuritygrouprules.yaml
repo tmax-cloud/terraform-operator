@@ -41,6 +41,8 @@ spec:
               type: string
             fromport:
               type: string
+            id:
+              type: string
             protocol:
               type: string
             provider:

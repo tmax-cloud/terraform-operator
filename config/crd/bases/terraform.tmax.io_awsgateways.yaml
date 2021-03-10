@@ -36,6 +36,8 @@ spec:
         spec:
           description: AWSGatewaySpec defines the desired state of AWSGateway
           properties:
+            id:
+              type: string
             provider:
               description: Foo is an example field of AWSGateway. Edit AWSGateway_types.go
                 to remove/update

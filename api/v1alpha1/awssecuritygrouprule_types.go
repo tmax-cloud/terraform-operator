@@ -31,6 +31,7 @@ type AWSSecurityGroupRuleSpec struct {
 	// Foo is an example field of AWSSecurityGroupRule. Edit AWSSecurityGroupRule_types.go to remove/update
 	Provider string `json:"provider,omitempty"`
 	SG       string `json:"sg,omitempty"`
+	ID       string `json:"id,omitempty"`
 	Type     string `json:"type,omitempty"`
 	FromPort string `json:"fromport,omitempty"`
 	ToPort   string `json:"toport,omitempty"`

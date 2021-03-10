@@ -30,6 +30,7 @@ type AWSKeySpec struct {
 
 	// Foo is an example field of AWSKey. Edit AWSKey_types.go to remove/update
 	Provider string `json:"provider,omitempty"`
+	ID       string `json:"id,omitempty"`
 }
 
 // AWSKeyStatus defines the observed state of AWSKey

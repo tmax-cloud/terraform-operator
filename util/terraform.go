@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/prometheus/common/log"
 	"github.com/terraform-providers/terraform-provider-aws/aws"
 	"github.com/terraform-providers/terraform-provider-tls/tls"
 	terraformv1alpha1 "github.com/tmax-cloud/terraform-operator/api/v1alpha1"
@@ -46,25 +47,31 @@ type TerraVars struct {
 	TenantID       string
 
 	/* AWSVPC */
+	VPCID   string
 	VPCName string
 	VPCCIDR string
 
 	/* AWSSubnet */
+	SubnetID   string
 	SubnetName string
 	SubnetCIDR string
 	Zone       string
 
 	/* AWSRoute */
+	RouteID   string
 	RouteName string
 	RouteCIDR string
 
 	/* AWSGateway */
+	GatewayID   string
 	GatewayName string
 
 	/* AWSSecurityGroup */
+	SGID   string
 	SGName string
 
 	/* AWSSecurityGroupRule */
+	SGRuleID   string
 	SGRuleName string
 	SGType     string
 	FromPort   string
@@ -73,9 +80,11 @@ type TerraVars struct {
 	SGCIDR     string
 
 	/* AWSKey */
+	KeyID   string
 	KeyName string
 
 	/* AWSInstance */
+	InstanceID   string
 	InstanceName string
 	InstanceType string
 	ImageID      string
@@ -139,24 +148,76 @@ func ConfigmapToVars(cm *corev1.ConfigMap) TerraVars {
 	configMapData := cm.Data
 
 	output := TerraVars{
+		Name:      configMapData["Name"],
 		Namespace: configMapData["Namespace"],
+		Type:      configMapData["Type"],
 
 		ProviderName:   configMapData["ProviderName"],
 		Cloud:          configMapData["Cloud"],
+		Region:         configMapData["Region"],
 		AccessKey:      configMapData["AccessKey"],
 		SecretKey:      configMapData["SecretKey"],
-		Region:         configMapData["Region"],
 		SubscriptionID: configMapData["SubscriptionID"],
 		ClientID:       configMapData["ClientID"],
 		ClientSecret:   configMapData["ClientSecret"],
 		TenantID:       configMapData["TenantID"],
 
-		NetworkName: configMapData["NetworkName"],
-		VPCCIDR:     configMapData["VPCCIDR"],
-		SubnetCIDR:  configMapData["SubnetCIDR"],
-		RouteCIDR:   configMapData["RouteCIDR"],
+		VPCID:   configMapData["VPCID"],
+		VPCName: configMapData["VPCName"],
+		VPCCIDR: configMapData["VPCCIDR"],
+
+		SubnetID:   configMapData["SubnetID"],
+		SubnetName: configMapData["SubnetName"],
+		SubnetCIDR: configMapData["SubnetCIDR"],
+		Zone:       configMapData["Zone"],
+
+		RouteID:   configMapData["RouteID"],
+		RouteName: configMapData["RouteName"],
+		RouteCIDR: configMapData["RouteCIDR"],
+
+		GatewayID:   configMapData["GatewayID"],
+		GatewayName: configMapData["GatewayName"],
+
+		SGID:   configMapData["SGID"],
+		SGName: configMapData["SGName"],
+
+		SGRuleID:   configMapData["SGRuleID"],
+		SGRuleName: configMapData["SGRuleName"],
+		SGType:     configMapData["SGType"],
+		FromPort:   configMapData["FromPort"],
+		ToPort:     configMapData["ToPort"],
+		Protocol:   configMapData["Protocol"],
+		SGCIDR:     configMapData["SGCIDR"],
+
+		KeyID:   configMapData["KeyID"],
+		KeyName: configMapData["KeyName"],
+
+		InstanceID:   configMapData["InstanceID"],
+		InstanceName: configMapData["InstanceName"],
+		InstanceType: configMapData["InstanceType"],
+		ImageID:      configMapData["ImageID"],
 	}
 
+	/*
+		output := TerraVars{
+			Namespace: configMapData["Namespace"],
+
+			ProviderName:   configMapData["ProviderName"],
+			Cloud:          configMapData["Cloud"],
+			AccessKey:      configMapData["AccessKey"],
+			SecretKey:      configMapData["SecretKey"],
+			Region:         configMapData["Region"],
+			SubscriptionID: configMapData["SubscriptionID"],
+			ClientID:       configMapData["ClientID"],
+			ClientSecret:   configMapData["ClientSecret"],
+			TenantID:       configMapData["TenantID"],
+
+			NetworkName: configMapData["NetworkName"],
+			VPCCIDR:     configMapData["VPCCIDR"],
+			SubnetCIDR:  configMapData["SubnetCIDR"],
+			RouteCIDR:   configMapData["RouteCIDR"],
+		}
+	*/
 	return output
 }
 
@@ -189,12 +250,62 @@ func ConfigmapForResource(input TerraVars) *corev1.ConfigMap {
 	return cm
 }
 
+// SearchResourceID returns a ConfigMap object
+/*
+func SearchResourceID(input TerraVars) TerraVars {
+
+	if input.VPCName != nil && input.VPCID == nil {
+
+	}
+
+
+	e := reflect.ValueOf(&input).Elem()
+
+	for i := 0; i < e.NumField(); i++ {
+		varName := e.Type().Field(i).Name
+		//varType := e.Type().Field(i).Type
+		varValue := fmt.Sprintf("%v", e.Field(i).Interface())
+
+		configMapData[varName] = varValue
+	}
+
+
+	return output
+}
+*/
+
+// ReadIDFromFile returns a Cloud Resource ID from Terraform State File
+func ReadIDFromFile(filename string) (string, error) {
+	var matched string // line with id
+
+	input, err := ioutil.ReadFile(filename)
+	if err != nil {
+		log.Error(err, "Failed to read Terraform State File")
+		return "", err
+	}
+
+	lines := strings.Split(string(input), "\n")
+
+	for i, line := range lines {
+		if strings.Contains(line, "\"id\"") {
+			matched = lines[i]
+		}
+	}
+
+	t := strings.Split(matched, "\"")
+	id := t[2]
+
+	return id, nil
+}
+
 // Execute Terraform (Go Package)
 // Provison or Destroy the remote resource
-func ExecuteTerraform(input TerraVars, destroy bool) error {
+func ExecuteTerraform(input TerraVars, destroy bool) (string, error) {
 	var platform *terranova.Platform // Platform is the platform to be managed by Terraform
 	var code string                  // HCL (Hashicorp Configuration Language)
+	var filename string
 	var err error
+	var id string
 
 	/*
 		platform, err = terranova.NewPlatform(code). 		// HCL 코드 기반으로 Platform 초기화 (Default Variable)
@@ -211,21 +322,26 @@ func ExecuteTerraform(input TerraVars, destroy bool) error {
 			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_VPC_TEMPLATE
 			code = strings.Replace(code, "{{VPC_NAME}}", input.VPCName, -1)
 
+			filename = input.Namespace + "-" + input.Type + "-" + input.VPCName + ".tfstate"
+
 			platform, err = terranova.NewPlatform(code).
 				AddProvider("aws", aws.Provider()).
 				Var("access_key", input.AccessKey).
 				Var("secret_key", input.SecretKey).
 				Var("region", input.Region).
 				Var("vpc_cidr", input.VPCCIDR).
-				PersistStateToFile(input.Namespace + "-" + input.ProviderName + ".tfstate")
+				PersistStateToFile(filename)
 
 			if err != nil {
-				return err
+				return "", err
 			}
 		} else if input.Type == "AWSSubnet" {
 			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_SUBNET_TEMPLATE
 			code = strings.Replace(code, "{{SUBNET_NAME}}", input.SubnetName, -1)
-			code = strings.Replace(code, "{{VPC_NAME}}", input.VPCName, -1)
+			code = strings.Replace(code, "{{VPC_ID}}", input.VPCID, -1)
+			//code = strings.Replace(code, "{{VPC_NAME}}", input.VPCName, -1)
+
+			filename = input.Namespace + "-" + input.Type + "-" + input.SubnetName + ".tfstate"
 
 			platform, err = terranova.NewPlatform(code).
 				AddProvider("aws", aws.Provider()).
@@ -234,32 +350,40 @@ func ExecuteTerraform(input TerraVars, destroy bool) error {
 				Var("region", input.Region).
 				Var("subnet_cidr", input.SubnetCIDR).
 				Var("zone", input.Zone).
-				PersistStateToFile(input.Namespace + "-" + input.ProviderName + ".tfstate")
+				PersistStateToFile(filename)
 
 			if err != nil {
-				return err
+				return "", err
 			}
 		} else if input.Type == "AWSGatewy" {
 			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_GATEWAY_TEMPLATE
 			code = strings.Replace(code, "{{GATEWAY_NAME}}", input.GatewayName, -1)
-			code = strings.Replace(code, "{{VPC_NAME}}", input.VPCName, -1)
+			code = strings.Replace(code, "{{VPC_ID}}", input.VPCID, -1)
+			//code = strings.Replace(code, "{{VPC_NAME}}", input.VPCName, -1)
+
+			filename = input.Namespace + "-" + input.Type + "-" + input.GatewayName + ".tfstate"
 
 			platform, err = terranova.NewPlatform(code).
 				AddProvider("aws", aws.Provider()).
 				Var("access_key", input.AccessKey).
 				Var("secret_key", input.SecretKey).
 				Var("region", input.Region).
-				PersistStateToFile(input.Namespace + "-" + input.ProviderName + ".tfstate")
+				PersistStateToFile(filename)
 
 			if err != nil {
-				return err
+				return "", err
 			}
 		} else if input.Type == "AWSRoute" {
 			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_ROUTE_TEMPLATE
 			code = strings.Replace(code, "{{ROUTE_NAME}}", input.RouteName, -1)
-			code = strings.Replace(code, "{{VPC_NAME}}", input.VPCName, -1)
-			code = strings.Replace(code, "{{GATEWAY_NAME}}", input.GatewayName, -1)
-			code = strings.Replace(code, "{{SUBNET_NAME}}", input.SubnetName, -1)
+			code = strings.Replace(code, "{{VPC_ID}}", input.VPCID, -1)
+			code = strings.Replace(code, "{{GATEWAY_ID}}", input.GatewayID, -1)
+			code = strings.Replace(code, "{{SUBNET_ID}}", input.SubnetID, -1)
+			//code = strings.Replace(code, "{{VPC_NAME}}", input.VPCName, -1)
+			//code = strings.Replace(code, "{{GATEWAY_NAME}}", input.GatewayName, -1)
+			//code = strings.Replace(code, "{{SUBNET_NAME}}", input.SubnetName, -1)
+
+			filename = input.Namespace + "-" + input.Type + "-" + input.RouteName + ".tfstate"
 
 			platform, err = terranova.NewPlatform(code).
 				AddProvider("aws", aws.Provider()).
@@ -267,44 +391,52 @@ func ExecuteTerraform(input TerraVars, destroy bool) error {
 				Var("secret_key", input.SecretKey).
 				Var("region", input.Region).
 				Var("route_cidr", input.RouteCIDR).
-				PersistStateToFile(input.Namespace + "-" + input.ProviderName + ".tfstate")
+				PersistStateToFile(filename)
 
 			if err != nil {
-				return err
+				return "", err
 			}
 		} else if input.Type == "AWSSecurityGroup" {
 			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_SECURITY_GROUP_TEMPLATE
 			code = strings.Replace(code, "{{SG_NAME}}", input.SGName, -1)
-			code = strings.Replace(code, "{{VPC_NAME}}", input.VPCName, -1)
+			code = strings.Replace(code, "{{VPC_NAME}}", input.VPCID, -1)
+			//code = strings.Replace(code, "{{VPC_NAME}}", input.VPCName, -1)
+
+			filename = input.Namespace + "-" + input.Type + "-" + input.SGName + ".tfstate"
 
 			platform, err = terranova.NewPlatform(code).
 				AddProvider("aws", aws.Provider()).
 				Var("access_key", input.AccessKey).
 				Var("secret_key", input.SecretKey).
 				Var("region", input.Region).
-				PersistStateToFile(input.Namespace + "-" + input.ProviderName + ".tfstate")
+				PersistStateToFile(filename)
 
 			if err != nil {
-				return err
+				return "", err
 			}
 		} else if input.Type == "AWSSecurityGroupRule" {
 			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_SECURITY_GROUP_RULE_TEMPLATE
 			code = strings.Replace(code, "{{SG_RULE_NAME}}", input.SGRuleName, -1)
-			code = strings.Replace(code, "{{SG_NAME}}", input.SGName, -1)
+			code = strings.Replace(code, "{{SG_NAME}}", input.SGID, -1)
+			//code = strings.Replace(code, "{{SG_NAME}}", input.SGName, -1)
+
+			filename = input.Namespace + "-" + input.Type + "-" + input.SGRuleName + ".tfstate"
 
 			platform, err = terranova.NewPlatform(code).
 				AddProvider("aws", aws.Provider()).
 				Var("access_key", input.AccessKey).
 				Var("secret_key", input.SecretKey).
 				Var("region", input.Region).
-				PersistStateToFile(input.Namespace + "-" + input.ProviderName + ".tfstate")
+				PersistStateToFile(filename)
 
 			if err != nil {
-				return err
+				return "", err
 			}
 		} else if input.Type == "AWSKey" {
 			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_KEY_TEMPLATE
 			code = strings.Replace(code, "{{KEY_NAME}}", input.KeyName, -1)
+
+			filename = input.Namespace + "-" + input.Type + "-" + input.KeyName + ".tfstate"
 
 			platform, err = terranova.NewPlatform(code).
 				AddProvider("aws", aws.Provider()).
@@ -313,16 +445,20 @@ func ExecuteTerraform(input TerraVars, destroy bool) error {
 				Var("secret_key", input.SecretKey).
 				Var("region", input.Region).
 				Var("key_pair", input.KeyName).
-				PersistStateToFile(input.Namespace + "-" + input.ProviderName + ".tfstate")
+				PersistStateToFile(filename)
 
 			if err != nil {
-				return err
+				return "", err
 			}
 		} else if input.Type == "AWSInstance" {
 			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_INSTANCE_TEMPLATE
-			code = strings.Replace(code, "{{SUBNET_NAME}}", input.SubnetName, -1)
-			code = strings.Replace(code, "{{SG_NAME}}", input.SGName, -1)
 			code = strings.Replace(code, "{{INS_NAME}}", input.InstanceName, -1)
+			code = strings.Replace(code, "{{SUBNET_ID}}", input.SubnetID, -1)
+			code = strings.Replace(code, "{{SG_ID}}", input.SGID, -1)
+			//code = strings.Replace(code, "{{SUBNET_NAME}}", input.SubnetName, -1)
+			//code = strings.Replace(code, "{{SG_NAME}}", input.SGName, -1)
+
+			filename = input.Namespace + "-" + input.Type + "-" + input.InstanceName + ".tfstate"
 
 			platform, err = terranova.NewPlatform(code).
 				AddProvider("aws", aws.Provider()).
@@ -333,14 +469,14 @@ func ExecuteTerraform(input TerraVars, destroy bool) error {
 				Var("instance_type", input.InstanceType).
 				Var("image_id", input.ImageID).
 				Var("key_pair", input.KeyName).
-				PersistStateToFile(input.Namespace + "-" + input.ProviderName + ".tfstate")
+				PersistStateToFile(filename)
 
 			if err != nil {
-				return err
+				return "", err
 			}
 		} else {
 			err = errors.New("Not Found Error: Resource Type")
-			return err
+			return "", err
 		}
 	} else if input.Cloud == "Azure" { // Platform : Azure
 
@@ -352,13 +488,17 @@ func ExecuteTerraform(input TerraVars, destroy bool) error {
 
 	} else {
 		err = errors.New("Not Found Error: Cloud Platform")
-		return err
+		return "", err
 	}
 
 	// terminate := (count == 0)
 	// Apply brings the platform to the desired state. (Provision / Destroy)
 	if err := platform.Apply(destroy); err != nil {
-		return err
+		return "", err
+	}
+
+	if id, err = ReadIDFromFile(filename); err != nil {
+		return "", err
 	}
 
 	/*
@@ -468,7 +608,7 @@ func ExecuteTerraform(input TerraVars, destroy bool) error {
 			return err
 		}
 	*/
-	return nil
+	return id, nil
 }
 
 // Initialize Terraform Working Directory

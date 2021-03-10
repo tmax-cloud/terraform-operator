@@ -46,6 +46,7 @@ type AWSSubnetReconciler struct {
 func (r *AWSSubnetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("awssubnet", req.NamespacedName)
+	var id string
 
 	// Fetch the AWS-Subnet instance
 	resource := &terraformv1alpha1.AWSSubnet{}
@@ -78,7 +79,7 @@ func (r *AWSSubnetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			// Destroy the Provisioned Resources for Deleted Object (Resource)
 			//err = util.ExecuteTerraform_CLI(util.HCL_DIR, isDestroy)
 			destroy := true
-			err = util.ExecuteTerraform(input, destroy)
+			id, err = util.ExecuteTerraform(input, destroy)
 			if err != nil {
 				log.Error(err, "Terraform Destroy Error")
 				return ctrl.Result{}, err
@@ -104,6 +105,7 @@ func (r *AWSSubnetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	input.Name = resource.Name
 	input.Namespace = resource.Namespace
 	input.SubnetName = resource.Name
+	input.SubnetID = resource.Spec.ID
 	input.Type = resource.Kind
 	input.SubnetCIDR = resource.Spec.CIDR
 	input.Zone = resource.Spec.Zone
@@ -150,6 +152,9 @@ func (r *AWSSubnetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
+	// Search the Resource ID
+	input = r.SearchResourceID(input)
+
 	// Check if the configmap already exists, if not create a new one
 	cmList := &corev1.ConfigMap{}
 	err = r.Get(ctx, types.NamespacedName{Name: resource.Name, Namespace: resource.Namespace}, cmList)
@@ -173,7 +178,7 @@ func (r *AWSSubnetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	// Provision the Resource Resource by Terraform. It'll skip
 	// when `Phase` is `provisioned`.
 	if resource.Status.Phase != "provisioned" {
-		err = util.ExecuteTerraform(input, false)
+		id, err = util.ExecuteTerraform(input, false)
 	}
 
 	// Set 'Phase' Status depending on the result of 'ExecuteTerraform'
@@ -189,15 +194,28 @@ func (r *AWSSubnetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			return ctrl.Result{}, err
 		}
 	} else {
+		resource.Spec.ID = id
 		resource.Status.Phase = "provisioned"
-		tErr := r.Status().Update(ctx, resource)
+		tErr := r.Update(ctx, resource)
 		if tErr != nil {
-			log.Error(tErr, "Failed to update Resource Status")
+			log.Error(tErr, "Failed to update Resource Spec/Status")
 			return ctrl.Result{}, tErr
 		}
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// SearchResourceID returns TerraVars struct with resource id
+func (r *AWSSubnetReconciler) SearchResourceID(input util.TerraVars) util.TerraVars {
+	output := input
+
+	if input.VPCName != "" && input.VPCID == "" {
+		vpc := &terraformv1alpha1.AWSVPC{}
+		r.Get(context.TODO(), types.NamespacedName{Name: input.VPCName, Namespace: input.Namespace}, vpc)
+		output.VPCID = vpc.Spec.ID
+	}
+	return output
 }
 
 func (r *AWSSubnetReconciler) SetupWithManager(mgr ctrl.Manager) error {

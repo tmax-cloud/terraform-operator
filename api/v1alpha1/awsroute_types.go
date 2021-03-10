@@ -33,6 +33,7 @@ type AWSRouteSpec struct {
 	VPC      string `json:"vpc,omitempty"`
 	Subnet   string `json:"subnet,omitempty"`
 	Gateway  string `json:"gateway,omitempty"`
+	ID       string `json:"id,omitempty"`
 	CIDR     string `json:"cidr,omitempty"`
 }
 

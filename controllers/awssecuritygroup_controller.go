@@ -46,6 +46,7 @@ type AWSSecurityGroupReconciler struct {
 func (r *AWSSecurityGroupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("awssecuritygroup", req.NamespacedName)
+	var id string
 
 	// Fetch the AWS-SecurityGroup instance
 	resource := &terraformv1alpha1.AWSSecurityGroup{}
@@ -78,7 +79,7 @@ func (r *AWSSecurityGroupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			// Destroy the Provisioned Resources for Deleted Object (Resource)
 			//err = util.ExecuteTerraform_CLI(util.HCL_DIR, isDestroy)
 			destroy := true
-			err = util.ExecuteTerraform(input, destroy)
+			id, err = util.ExecuteTerraform(input, destroy)
 			if err != nil {
 				log.Error(err, "Terraform Destroy Error")
 				return ctrl.Result{}, err
@@ -171,7 +172,7 @@ func (r *AWSSecurityGroupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	// Provision the Resource Resource by Terraform. It'll skip
 	// when `Phase` is `provisioned`.
 	if resource.Status.Phase != "provisioned" {
-		err = util.ExecuteTerraform(input, false)
+		id, err = util.ExecuteTerraform(input, false)
 	}
 
 	// Set 'Phase' Status depending on the result of 'ExecuteTerraform'
@@ -187,10 +188,11 @@ func (r *AWSSecurityGroupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			return ctrl.Result{}, err
 		}
 	} else {
+		resource.Spec.ID = id
 		resource.Status.Phase = "provisioned"
-		tErr := r.Status().Update(ctx, resource)
+		tErr := r.Update(ctx, resource)
 		if tErr != nil {
-			log.Error(tErr, "Failed to update Resource Status")
+			log.Error(tErr, "Failed to update Resource Spec/Status")
 			return ctrl.Result{}, tErr
 		}
 	}

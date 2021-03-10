@@ -30,11 +30,4 @@ terraform_template/
 delete.sh
 
 # Sample Yaml
-sample_provider.yaml
-sample_network.yaml
-sample_instance.yaml
-sample_security.yaml
-sample_storage.yaml
-
-sample_instance2.yaml
-sample_provider2.yaml
+sample/

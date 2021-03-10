@@ -36,6 +36,8 @@ spec:
         spec:
           description: AWSSecurityGroupSpec defines the desired state of AWSSecurityGroup
           properties:
+            id:
+              type: string
             provider:
               description: Foo is an example field of AWSSecurityGroup. Edit AWSSecurityGroup_types.go
                 to remove/update

@@ -31,6 +31,7 @@ type AWSSubnetSpec struct {
 	// Foo is an example field of AWSSubnet. Edit AWSSubnet_types.go to remove/update
 	Provider string `json:"provider,omitempty"`
 	VPC      string `json:"vpc,omitempty"`
+	ID       string `json:"id,omitempty"`
 	CIDR     string `json:"cidr,omitempty"`
 	Zone     string `json:"zone,omitempty"`
 }
