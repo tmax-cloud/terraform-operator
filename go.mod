@@ -9,7 +9,7 @@ require (
 	github.com/jen20/awspolicyequivalence v1.1.0 // indirect
 	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.1
-	github.com/prometheus/common v0.4.1
+	github.com/prometheus/common v0.9.1
 	github.com/terraform-providers/terraform-provider-aws v1.60.1-0.20191003145700-f8707a46c6ec
 	github.com/terraform-providers/terraform-provider-azurerm v1.34.0
 	github.com/terraform-providers/terraform-provider-null v1.0.0
@@ -18,6 +18,7 @@ require (
 	k8s.io/api v0.18.6
 	k8s.io/apimachinery v0.18.6
 	k8s.io/client-go v10.0.0+incompatible
+	sigs.k8s.io/cluster-api v0.3.8
 	sigs.k8s.io/controller-runtime v0.6.3
 )
 

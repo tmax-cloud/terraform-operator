@@ -19,12 +19,14 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -100,14 +102,23 @@ func (r *AWSKeyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	// your logic here
 
+	helper, _ := patch.NewHelper(resource, r.Client)
+
 	defer func() {
-		if err = r.Update(ctx, resource); err != nil {
-			log.Error(err, "Failed to update Resource")
-		}
-		if err = r.Status().Update(ctx, resource); err != nil {
-			log.Error(err, "Failed to update Resource Status")
+		if err := helper.Patch(ctx, resource); err != nil {
+			log.Error(err, "resource patch error")
 		}
 	}()
+	/*
+		defer func() {
+			if err = r.Update(ctx, resource); err != nil {
+				log.Error(err, "Failed to update Resource")
+			}
+			if err = r.Status().Update(ctx, resource); err != nil {
+				log.Error(err, "Failed to update Resource Status")
+			}
+		}()
+	*/
 
 	input := util.TerraVars{}
 
@@ -178,7 +189,7 @@ func (r *AWSKeyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	// Provision the Resource Resource by Terraform. It'll skip
 	// when `Phase` is `provisioned`.
-	if resource.Status.Phase != "provisioned" {
+	if resource.Status.Phase == "" {
 		id, err = util.ExecuteTerraform(input, false)
 
 		if err != nil {
@@ -187,9 +198,29 @@ func (r *AWSKeyReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			resource.Status.Phase = "provisioned"
 			resource.Spec.ID = id
 		}
+	} else {
+		status, err := util.PlanTerraform(input)
+		log.Info("status:" + status)
+		if err != nil {
+			resource.Status.Phase = "error"
+		} else {
+			resource.Status.Phase = status
+		}
 	}
+	/*
+		if resource.Status.Phase != "provisioned" {
+			id, err = util.ExecuteTerraform(input, false)
 
-	return ctrl.Result{}, nil
+			if err != nil {
+				resource.Status.Phase = "error"
+			} else {
+				resource.Status.Phase = "provisioned"
+				resource.Spec.ID = id
+			}
+		}
+	*/
+	//return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: time.Second * 60}, nil // Reconcile loop rescheduled after 60 seconds
 }
 
 func (r *AWSKeyReconciler) SetupWithManager(mgr ctrl.Manager) error {

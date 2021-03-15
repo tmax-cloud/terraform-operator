@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/hashicorp/terraform/plans"
 	"github.com/prometheus/common/log"
 	"github.com/terraform-providers/terraform-provider-aws/aws"
 	"github.com/terraform-providers/terraform-provider-tls/tls"
@@ -303,6 +304,220 @@ func ReadIDFromFile(filename string) (string, error) {
 	}
 
 	return id, nil
+}
+
+// plan Terraform (Go Package)
+func PlanTerraform(input TerraVars) (string, error) {
+	var platform *terranova.Platform // Platform is the platform to be managed by Terraform
+	var code string                  // HCL (Hashicorp Configuration Language)
+	var filename string
+	var err error
+
+	var plan *plans.Plan
+	var stats *terranova.Stats
+	var status string
+
+	/*
+		platform, err = terranova.NewPlatform(code). 		// HCL 코드 기반으로 Platform 초기화 (Default Variable)
+		AddProvider("aws", aws.Provider()).					// Provider 추가 (e.g. AWS, Azure, TLS 등)
+		Var("access_key", input.AccessKey).					// HCL 코드 내 변수 설정
+		PersistStateToFile(input.NetworkName + ".tfstate") 	// Terraform State File 설정
+		...
+		platform.Apply(destroy) 							// 설정된 Context 내용 기반으로 클라우드 리소스 생성/삭제 수행
+	*/
+
+	// Define the platform corrensponding to Cloud - Resource type
+	if input.Cloud == "AWS" { // Platform : AWS
+		if input.Type == "AWSVPC" {
+			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_VPC_TEMPLATE
+			code = strings.Replace(code, "{{VPC_NAME}}", input.VPCName, -1)
+
+			filename = input.Namespace + "-" + input.Type + "-" + input.VPCName + ".tfstate"
+
+			platform, err = terranova.NewPlatform(code).
+				AddProvider("aws", aws.Provider()).
+				Var("access_key", input.AccessKey).
+				Var("secret_key", input.SecretKey).
+				Var("region", input.Region).
+				Var("vpc_cidr", input.VPCCIDR).
+				PersistStateToFile(filename)
+
+			if err != nil {
+				return "", err
+			}
+		} else if input.Type == "AWSSubnet" {
+			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_SUBNET_TEMPLATE
+			code = strings.Replace(code, "{{SUBNET_NAME}}", input.SubnetName, -1)
+			code = strings.Replace(code, "{{VPC_ID}}", input.VPCID, -1)
+			//code = strings.Replace(code, "{{VPC_NAME}}", input.VPCName, -1)
+
+			filename = input.Namespace + "-" + input.Type + "-" + input.SubnetName + ".tfstate"
+
+			platform, err = terranova.NewPlatform(code).
+				AddProvider("aws", aws.Provider()).
+				Var("access_key", input.AccessKey).
+				Var("secret_key", input.SecretKey).
+				Var("region", input.Region).
+				Var("subnet_cidr", input.SubnetCIDR).
+				Var("zone", input.Zone).
+				PersistStateToFile(filename)
+
+			if err != nil {
+				return "", err
+			}
+		} else if input.Type == "AWSGatewy" {
+			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_GATEWAY_TEMPLATE
+			code = strings.Replace(code, "{{GATEWAY_NAME}}", input.GatewayName, -1)
+			code = strings.Replace(code, "{{VPC_ID}}", input.VPCID, -1)
+			//code = strings.Replace(code, "{{VPC_NAME}}", input.VPCName, -1)
+
+			filename = input.Namespace + "-" + input.Type + "-" + input.GatewayName + ".tfstate"
+
+			platform, err = terranova.NewPlatform(code).
+				AddProvider("aws", aws.Provider()).
+				Var("access_key", input.AccessKey).
+				Var("secret_key", input.SecretKey).
+				Var("region", input.Region).
+				PersistStateToFile(filename)
+
+			if err != nil {
+				return "", err
+			}
+		} else if input.Type == "AWSRoute" {
+			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_ROUTE_TEMPLATE
+			code = strings.Replace(code, "{{ROUTE_NAME}}", input.RouteName, -1)
+			code = strings.Replace(code, "{{VPC_ID}}", input.VPCID, -1)
+			code = strings.Replace(code, "{{GATEWAY_ID}}", input.GatewayID, -1)
+			code = strings.Replace(code, "{{SUBNET_ID}}", input.SubnetID, -1)
+			//code = strings.Replace(code, "{{VPC_NAME}}", input.VPCName, -1)
+			//code = strings.Replace(code, "{{GATEWAY_NAME}}", input.GatewayName, -1)
+			//code = strings.Replace(code, "{{SUBNET_NAME}}", input.SubnetName, -1)
+
+			filename = input.Namespace + "-" + input.Type + "-" + input.RouteName + ".tfstate"
+
+			platform, err = terranova.NewPlatform(code).
+				AddProvider("aws", aws.Provider()).
+				Var("access_key", input.AccessKey).
+				Var("secret_key", input.SecretKey).
+				Var("region", input.Region).
+				Var("route_cidr", input.RouteCIDR).
+				PersistStateToFile(filename)
+
+			if err != nil {
+				return "", err
+			}
+		} else if input.Type == "AWSSecurityGroup" {
+			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_SECURITY_GROUP_TEMPLATE
+			code = strings.Replace(code, "{{SG_NAME}}", input.SGName, -1)
+			code = strings.Replace(code, "{{VPC_NAME}}", input.VPCID, -1)
+			//code = strings.Replace(code, "{{VPC_NAME}}", input.VPCName, -1)
+
+			filename = input.Namespace + "-" + input.Type + "-" + input.SGName + ".tfstate"
+
+			platform, err = terranova.NewPlatform(code).
+				AddProvider("aws", aws.Provider()).
+				Var("access_key", input.AccessKey).
+				Var("secret_key", input.SecretKey).
+				Var("region", input.Region).
+				PersistStateToFile(filename)
+
+			if err != nil {
+				return "", err
+			}
+		} else if input.Type == "AWSSecurityGroupRule" {
+			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_SECURITY_GROUP_RULE_TEMPLATE
+			code = strings.Replace(code, "{{SG_RULE_NAME}}", input.SGRuleName, -1)
+			code = strings.Replace(code, "{{SG_NAME}}", input.SGID, -1)
+			//code = strings.Replace(code, "{{SG_NAME}}", input.SGName, -1)
+
+			filename = input.Namespace + "-" + input.Type + "-" + input.SGRuleName + ".tfstate"
+
+			platform, err = terranova.NewPlatform(code).
+				AddProvider("aws", aws.Provider()).
+				Var("access_key", input.AccessKey).
+				Var("secret_key", input.SecretKey).
+				Var("region", input.Region).
+				PersistStateToFile(filename)
+
+			if err != nil {
+				return "", err
+			}
+		} else if input.Type == "AWSKey" {
+			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_KEY_TEMPLATE
+			code = strings.Replace(code, "{{KEY_NAME}}", input.KeyName, -1)
+
+			filename = input.Namespace + "-" + input.Type + "-" + input.KeyName + ".tfstate"
+
+			platform, err = terranova.NewPlatform(code).
+				AddProvider("aws", aws.Provider()).
+				AddProvider("tls", tls.Provider()).
+				Var("access_key", input.AccessKey).
+				Var("secret_key", input.SecretKey).
+				Var("region", input.Region).
+				Var("key_pair", input.KeyName).
+				PersistStateToFile(filename)
+
+			if err != nil {
+				return "", err
+			}
+		} else if input.Type == "AWSInstance" {
+			code = AWS_PROVIDER_TEMPLATE + "\n" + AWS_INSTANCE_TEMPLATE
+			code = strings.Replace(code, "{{INS_NAME}}", input.InstanceName, -1)
+			code = strings.Replace(code, "{{SUBNET_ID}}", input.SubnetID, -1)
+			code = strings.Replace(code, "{{SG_ID}}", input.SGID, -1)
+			//code = strings.Replace(code, "{{SUBNET_NAME}}", input.SubnetName, -1)
+			//code = strings.Replace(code, "{{SG_NAME}}", input.SGName, -1)
+
+			filename = input.Namespace + "-" + input.Type + "-" + input.InstanceName + ".tfstate"
+
+			platform, err = terranova.NewPlatform(code).
+				AddProvider("aws", aws.Provider()).
+				AddProvider("tls", tls.Provider()).
+				Var("access_key", input.AccessKey).
+				Var("secret_key", input.SecretKey).
+				Var("region", input.Region).
+				Var("instance_type", input.InstanceType).
+				Var("image_id", input.ImageID).
+				Var("key_pair", input.KeyName).
+				PersistStateToFile(filename)
+
+			if err != nil {
+				return "", err
+			}
+		} else {
+			err = errors.New("Not Found Error: Resource Type")
+			return "", err
+		}
+	} else if input.Cloud == "Azure" { // Platform : Azure
+
+	} else if input.Cloud == "GCP" { // Platform : Google Cloud Platform
+
+	} else if input.Cloud == "OpenStack" { // Platform : OpenStack
+
+	} else if input.Cloud == "VSphere" { // Platform : VSphere
+
+	} else {
+		err = errors.New("Not Found Error: Cloud Platform")
+		return "", err
+	}
+
+	// terminate := (count == 0)
+	// Apply brings the platform to the desired state. (Provision / Destroy)
+	if plan, err = platform.Plan(false); err != nil {
+		return "", err
+	}
+
+	stats = terranova.NewStats().FromPlan(plan)
+
+	status = "provisioned"
+	if stats.Change >= 1 || stats.Destroy >= 1 {
+		status = "chanaged"
+	}
+	if stats.Add >= 1 {
+		status = "destroyed"
+	}
+
+	return status, nil
 }
 
 // Execute Terraform (Go Package)
