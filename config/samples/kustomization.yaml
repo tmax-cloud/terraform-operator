@@ -14,4 +14,5 @@ resources:
 - terraform_v1alpha1_awssecuritygrouprule.yaml
 - terraform_v1alpha1_awsinstance.yaml
 - terraform_v1alpha1_awskey.yaml
+- terraform_v1alpha1_repository.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

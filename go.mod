@@ -15,6 +15,7 @@ require (
 	github.com/terraform-providers/terraform-provider-null v1.0.0
 	github.com/terraform-providers/terraform-provider-tls v2.1.0+incompatible
 	github.com/zclconf/go-cty v1.7.1
+	gopkg.in/src-d/go-git.v4 v4.13.1
 	k8s.io/api v0.18.6
 	k8s.io/apimachinery v0.18.6
 	k8s.io/client-go v10.0.0+incompatible

@@ -326,6 +326,32 @@ rules:
 - apiGroups:
   - terraform.tmax.io
   resources:
+  - repositories
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - repositories/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - repositories/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
   - resources
   verbs:
   - create
