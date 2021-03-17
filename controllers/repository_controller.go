@@ -17,6 +17,7 @@ limitations under the License.
 package controllers
 
 import (
+	"io/ioutil"
 	"os"
 	"time"
 
@@ -37,6 +38,7 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 )
 
 // RepositoryReconciler reconciles a Repository object
@@ -79,12 +81,21 @@ func (r *RepositoryReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		}
 	}()
 
+	if repository.Spec.Type == "" {
+		repository.Spec.Type = "Public"
+	}
+
 	repositoryName := repository.Name
 	repositoryType := repository.Spec.Type
 	repositoryURL := repository.Spec.URL
 	repositoryBranch := repository.Spec.Branch
 	repositoryID := repository.Spec.ID
 	repositoryPW := repository.Spec.PW
+
+	repositoryAuth := &http.BasicAuth{
+		Username: repositoryID,
+		Password: repositoryPW,
+	}
 
 	fmt.Println("repositoryName:" + repositoryName)
 	fmt.Println("repositoryType:" + repositoryType)
@@ -93,24 +104,36 @@ func (r *RepositoryReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	fmt.Println("repositoryID:" + repositoryID)
 	fmt.Println("repositoryPW:" + repositoryPW)
 
-	_, err = git.PlainClone(repositoryName, false, &git.CloneOptions{
-		URL:      repositoryURL,
-		Progress: os.Stdout,
-	})
+	// Clone Repository
+	if repositoryType == "Public" {
+		_, err = git.PlainClone(repositoryName, false, &git.CloneOptions{
+			URL:      repositoryURL,
+			Progress: os.Stdout,
+		})
+	} else {
+		_, err = git.PlainClone(repositoryName, false, &git.CloneOptions{
+			Auth:     repositoryAuth,
+			URL:      repositoryURL,
+			Progress: os.Stdout,
+		})
+	}
 	if err != nil {
 		log.Error(err, "Failed to clone Repository")
 	}
 
+	// Open Repository
 	gitrepo, err := git.PlainOpen(repositoryName)
 	if err != nil {
 		log.Error(err, "Failed to Open Repository")
 	}
 
+	// Create Work Tree
 	worktree, err := gitrepo.Worktree()
 	if err != nil {
 		log.Error(err, "Failed to Create WorkTree")
 	}
 
+	// Get All Remote Branches
 	err = gitrepo.Fetch(&git.FetchOptions{
 		RefSpecs: []config.RefSpec{"refs/*:refs/*", "HEAD:refs/heads/HEAD"},
 	})
@@ -119,6 +142,7 @@ func (r *RepositoryReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	}
 	//fmt.Sprintf("refs/heads/%s", repositoryBranch),
 
+	// Checkout the selected branch
 	if repositoryBranch != "" {
 		branch := "refs/heads/" + repositoryBranch
 		err = worktree.Checkout(&git.CheckoutOptions{
@@ -130,12 +154,36 @@ func (r *RepositoryReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		}
 	}
 
-	err = worktree.Pull(&git.PullOptions{RemoteName: "origin"})
+	// Pull the Git Repository
+	if repositoryType == "Public" {
+		err = worktree.Pull(&git.PullOptions{RemoteName: "origin"})
+	} else {
+		err = worktree.Pull(&git.PullOptions{
+			Auth:       repositoryAuth,
+			RemoteName: "origin",
+		})
+	}
 	if err != nil {
 		log.Error(err, "Failed to pull Repository")
 		repository.Status.Phase = "error"
 	} else {
 		repository.Status.Phase = "success"
+	}
+
+	//targetDir := repositoryName
+	files, err := ioutil.ReadDir(repositoryName)
+	if err != nil {
+		fmt.Println(err)
+	}
+	for _, file := range files {
+		// 파일명
+		fmt.Println(file.Name())
+		// 파일의 절대경로
+		fmt.Println(fmt.Sprintf("%v/%v", repositoryName, file.Name()))
+		// 파일 내용
+		//fmt.Printf("%s", file)
+		content, _ := ioutil.ReadFile(fmt.Sprintf("%v/%v", repositoryName, file.Name()))
+		fmt.Printf("%s", content)
 	}
 
 	// Create Terraform Working Directory
