@@ -1,0 +1,20 @@
+# permissions for end users to view hcls.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: hcl-viewer-role
+rules:
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - hcls
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - hcls/status
+  verbs:
+  - get

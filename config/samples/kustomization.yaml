@@ -15,4 +15,5 @@ resources:
 - terraform_v1alpha1_awsinstance.yaml
 - terraform_v1alpha1_awskey.yaml
 - terraform_v1alpha1_repository.yaml
+- terraform_v1alpha1_hcl.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

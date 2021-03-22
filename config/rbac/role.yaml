@@ -248,6 +248,26 @@ rules:
 - apiGroups:
   - terraform.tmax.io
   resources:
+  - hcls
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - terraform.tmax.io
+  resources:
+  - hcls/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - terraform.tmax.io
+  resources:
   - instances
   verbs:
   - create
