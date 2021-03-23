@@ -3,53 +3,8 @@ layout: go.kubebuilder.io/v2
 projectName: terraform-operator
 repo: github.com/tmax-cloud/terraform-operator
 resources:
-- group: terraform
-  kind: Provider
-  version: v1alpha1
-- group: terraform
-  kind: Instance
-  version: v1alpha1
-- group: terraform
-  kind: Network
-  version: v1alpha1
-- group: terraform
-  kind: Storage
-  version: v1alpha1
-- group: terraform
-  kind: Security
-  version: v1alpha1
-- group: terraform
-  kind: Resource
-  version: v1alpha1
-- group: terraform
-  kind: AWSVPC
-  version: v1alpha1
-- group: terraform
-  kind: AWSSubnet
-  version: v1alpha1
-- group: terraform
-  kind: AWSGateway
-  version: v1alpha1
-- group: terraform
-  kind: AWSRoute
-  version: v1alpha1
-- group: terraform
-  kind: AWSSecurityGroup
-  version: v1alpha1
-- group: terraform
-  kind: AWSSecurityGroupRule
-  version: v1alpha1
-- group: terraform
-  kind: AWSInstance
-  version: v1alpha1
-- group: terraform
-  kind: AWSKey
-  version: v1alpha1
-- group: terraform
-  kind: Repository
-  version: v1alpha1
-- group: terraform
-  kind: HCL
+- group: claim
+  kind: TFApplyClaim
   version: v1alpha1
 version: 3-alpha
 plugins:

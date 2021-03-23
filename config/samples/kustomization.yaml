@@ -1,19 +1,4 @@
 ## Append samples you want in your CSV to this file as resources ##
 resources:
-- terraform_v1alpha1_provider.yaml
-- terraform_v1alpha1_instance.yaml
-- terraform_v1alpha1_network.yaml
-- terraform_v1alpha1_storage.yaml
-- terraform_v1alpha1_security.yaml
-- terraform_v1alpha1_resource.yaml
-- terraform_v1alpha1_awsvpc.yaml
-- terraform_v1alpha1_awssubnet.yaml
-- terraform_v1alpha1_awsgateway.yaml
-- terraform_v1alpha1_awsroute.yaml
-- terraform_v1alpha1_awssecuritygroup.yaml
-- terraform_v1alpha1_awssecuritygrouprule.yaml
-- terraform_v1alpha1_awsinstance.yaml
-- terraform_v1alpha1_awskey.yaml
-- terraform_v1alpha1_repository.yaml
-- terraform_v1alpha1_hcl.yaml
+- claim_v1alpha1_tfapplyclaim.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples
