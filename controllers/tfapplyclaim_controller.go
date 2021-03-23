@@ -18,7 +18,8 @@ package controllers
 
 import (
 	"fmt"
-	"io"
+	"os"
+	"strings"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -50,10 +51,11 @@ type TFApplyClaimReconciler struct {
 
 // +kubebuilder:rbac:groups=claim.tmax.io,resources=tfapplyclaims,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=claim.tmax.io,resources=tfapplyclaims/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=claim.tmax.io,resources=providers/finalizers,verbs=update
+// +kubebuilder:rbac:groups=claim.tmax.io,resources=tfapplyclaims/finalizers,verbs=update
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;
+// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=pods/exec,verbs=create
 
 func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
@@ -76,6 +78,20 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}
 
 	// your logic here
+	repoType := apply.Spec.Type
+	url := apply.Spec.URL
+	id := apply.Spec.ID
+	pw := apply.Spec.PW
+	branch := apply.Spec.Branch
+	dest := "working_dir"
+	//opt_terraform := "-chdir=/" + dest // only terrform 0.14+
+
+	fmt.Println(repoType)
+	fmt.Println(url)
+	fmt.Println(id)
+	fmt.Println(pw)
+	fmt.Println(branch)
+
 	helper, _ := patch.NewHelper(apply, r.Client)
 
 	defer func() {
@@ -129,12 +145,20 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}
 	podNames := getPodNames(podList.Items)
 
+	if len(podNames) < 1 {
+		log.Info("Not yet create Terraform Pod...")
+		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+	}
+
+	fmt.Println("10 seconds delay....")
+	time.Sleep(time.Second * 10)
+
 	fmt.Println(podNames)
 	fmt.Println("podNames[0]:" + podNames[0])
 
-	var stdin io.Reader
-	var stdout io.Writer
-	var stderr io.Writer
+	//var stdin os.Stdin
+	//var stdout os.Stdout
+	//var stderr os.Stderr
 
 	// creates the in-cluster config
 	config, err := rest.InClusterConfig()
@@ -149,15 +173,59 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		return ctrl.Result{}, err
 	}
 
-	err = util.ExecCmdExample(clientset, config, podNames[0], "ls", stdin, stdout, stderr)
-	if err != nil {
-		log.Error(err, "Failed to exec pod (go-client)")
-		return ctrl.Result{}, err
+	//err = util.ExecCmdExample(clientset, config, podNames[0], "ls", os.Stdin, os.Stdout, os.Stderr)
+	// Go Client - POD EXEC
+	// 1. Git Clone Repository
+	if repoType == "private" {
+		var protocol string
+
+		if strings.Contains(url, "http://") {
+			protocol = "http://"
+		} else if strings.Contains(url, "https://") {
+			protocol = "https://"
+		}
+
+		url = strings.TrimLeft(url, protocol)
+		url = protocol + id + ":" + pw + "@" + url
 	}
 
-	fmt.Println(stdin)
-	fmt.Println(stdout)
-	fmt.Println(stderr)
+	if apply.Status.Phase == "" {
+		cmd := "git clone " + url + " " + dest
+		err = util.ExecCmdExample(clientset, config, podNames[0], cmd, os.Stdin, os.Stdout, os.Stderr)
+	}
+
+	if err != nil {
+		log.Error(err, "Failed to Clone Git Repository")
+		return ctrl.Result{}, err
+	} else {
+		apply.Status.Phase = "cloned"
+	}
+
+	// 2. Terraform Initialization
+	if apply.Status.Phase == "cloned" {
+		//cmd := "terraform init" + " " + opt_terraform
+		cmd := "cd " + dest + ";" + "terraform init"
+		err = util.ExecCmdExample(clientset, config, podNames[0], cmd, os.Stdin, os.Stdout, os.Stderr)
+	}
+
+	if err != nil {
+		log.Error(err, "Failed to Initialize Terraform")
+		return ctrl.Result{}, err
+	} else {
+		apply.Status.Phase = "awating"
+	}
+
+	// 3. Terraform Plan
+
+	// 4. Terraform Apply
+
+	fmt.Println("**CMD LOG***")
+	//fmt.Println(stdin)
+	//fmt.Println(stdout)
+	//fmt.Println(stderr)
+	//fmt.Printf("%s\n", os.Stdout)
+	//fmt.Printf("%s\n", os.Stderr)
+	fmt.Println("************")
 
 	if err != nil {
 		log.Error(err, "Failed to pull Repository")
@@ -168,7 +236,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 	// Create Terraform Working Directory
 	//terraDir := util.HCL_DIR + "/" + providerName
-
+	fmt.Println("**END OF RECONCILE LOOP***")
 	return ctrl.Result{RequeueAfter: time.Second * 60}, nil // Reconcile loop rescheduled after 60 seconds
 
 }

@@ -21,12 +21,6 @@ rules:
 - apiGroups:
   - claim.tmax.io
   resources:
-  - providers/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - claim.tmax.io
-  resources:
   - tfapplyclaims
   verbs:
   - create
@@ -36,6 +30,12 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - claim.tmax.io
+  resources:
+  - tfapplyclaims/finalizers
+  verbs:
+  - update
 - apiGroups:
   - claim.tmax.io
   resources:
@@ -61,5 +61,16 @@ rules:
   resources:
   - pods
   verbs:
+  - create
+  - delete
   - get
   - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/exec
+  verbs:
+  - create
