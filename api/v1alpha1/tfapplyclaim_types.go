@@ -29,20 +29,27 @@ type TFApplyClaimSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of TFApplyClaim. Edit TFApplyClaim_types.go to remove/update
-	Type   string `json:"type,omitempty"`
-	URL    string `json:"url,omitempty"`
-	Branch string `json:"branch,omitempty"`
-	ID     string `json:"id,omitempty"`
-	PW     string `json:"pw,omitempty"`
-	Size   int32  `json:"size,omitempty"`
+	Type    string `json:"type,omitempty"`
+	URL     string `json:"url,omitempty"`
+	Branch  string `json:"branch,omitempty"`
+	Email   string `json:"email,omitempty"`
+	ID      string `json:"id,omitempty"`
+	PW      string `json:"pw,omitempty"`
+	Size    int32  `json:"size,omitempty"`
+	Plan    bool   `json:"plan,omitempty"`
+	Apply   bool   `json:"apply,omitempty"`
+	Destroy bool   `json:"destroy,omitempty"`
 }
 
 // TFApplyClaimStatus defines the observed state of TFApplyClaim
 type TFApplyClaimStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Nodes []string `json:"nodes,omitempty"`
-	Phase string   `json:"phase,omitempty"`
+	Nodes   []string `json:"nodes,omitempty"`
+	Phase   string   `json:"phase,omitempty"`
+	Plan    string   `json:"plan,omitempty"`
+	Apply   string   `json:"apply,omitempty"`
+	Destroy string   `json:"destroy,omitempty"`
 }
 
 // +kubebuilder:object:root=true

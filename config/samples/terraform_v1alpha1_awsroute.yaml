@@ -1,7 +1,0 @@
-apiVersion: terraform.tmax.io/v1alpha1
-kind: AWSRoute
-metadata:
-  name: awsroute-sample
-spec:
-  # Add fields here
-  foo: bar

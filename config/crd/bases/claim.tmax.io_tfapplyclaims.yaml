@@ -36,10 +36,18 @@ spec:
         spec:
           description: TFApplyClaimSpec defines the desired state of TFApplyClaim
           properties:
+            apply:
+              type: boolean
             branch:
+              type: string
+            destroy:
+              type: boolean
+            email:
               type: string
             id:
               type: string
+            plan:
+              type: boolean
             pw:
               type: string
             size:
@@ -55,6 +63,10 @@ spec:
         status:
           description: TFApplyClaimStatus defines the observed state of TFApplyClaim
           properties:
+            apply:
+              type: string
+            destroy:
+              type: string
             nodes:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
                 of cluster Important: Run "make" to regenerate code after modifying
@@ -63,6 +75,8 @@ spec:
                 type: string
               type: array
             phase:
+              type: string
+            plan:
               type: string
           type: object
       type: object

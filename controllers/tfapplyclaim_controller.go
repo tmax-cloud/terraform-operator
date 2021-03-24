@@ -17,8 +17,9 @@ limitations under the License.
 package controllers
 
 import (
+	"bytes"
 	"fmt"
-	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -80,6 +81,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	// your logic here
 	repoType := apply.Spec.Type
 	url := apply.Spec.URL
+	email := apply.Spec.Email
 	id := apply.Spec.ID
 	pw := apply.Spec.PW
 	branch := apply.Spec.Branch
@@ -88,6 +90,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 	fmt.Println(repoType)
 	fmt.Println(url)
+	fmt.Println(email)
 	fmt.Println(id)
 	fmt.Println(pw)
 	fmt.Println(branch)
@@ -160,6 +163,9 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	//var stdout os.Stdout
 	//var stderr os.Stderr
 
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
 	// creates the in-cluster config
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -174,65 +180,187 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}
 
 	//err = util.ExecCmdExample(clientset, config, podNames[0], "ls", os.Stdin, os.Stdout, os.Stderr)
+	//err = util.ExecCmdExample(clientset, config, podNames[0], cmd, os.Stdin, os.Stdout, os.Stderr)
+
 	// Go Client - POD EXEC
 	// 1. Git Clone Repository
-	if repoType == "private" {
-		var protocol string
+	if apply.Status.Phase == "" {
+		if repoType == "private" {
+			var protocol string
 
-		if strings.Contains(url, "http://") {
-			protocol = "http://"
-		} else if strings.Contains(url, "https://") {
-			protocol = "https://"
+			if strings.Contains(url, "http://") {
+				protocol = "http://"
+			} else if strings.Contains(url, "https://") {
+				protocol = "https://"
+			}
+
+			url = strings.TrimLeft(url, protocol)
+			url = protocol + id + ":" + pw + "@" + url
 		}
 
-		url = strings.TrimLeft(url, protocol)
-		url = protocol + id + ":" + pw + "@" + url
-	}
+		stdout.Reset()
+		stderr.Reset()
 
-	if apply.Status.Phase == "" {
 		cmd := "git clone " + url + " " + dest
-		err = util.ExecCmdExample(clientset, config, podNames[0], cmd, os.Stdin, os.Stdout, os.Stderr)
-	}
+		err = util.ExecCmdExample(clientset, config, podNames[0], cmd, nil, &stdout, &stderr)
 
-	if err != nil {
-		log.Error(err, "Failed to Clone Git Repository")
-		return ctrl.Result{}, err
-	} else {
-		apply.Status.Phase = "cloned"
+		fmt.Println(stdout.String())
+		fmt.Println(stderr.String())
+
+		if err != nil {
+			log.Error(err, "Failed to Clone Git Repository")
+			apply.Status.Phase = "error"
+			return ctrl.Result{}, err
+		} else {
+			apply.Status.Phase = "cloned"
+		}
 	}
 
 	// 2. Terraform Initialization
 	if apply.Status.Phase == "cloned" {
+		stdout.Reset()
+		stderr.Reset()
+
 		//cmd := "terraform init" + " " + opt_terraform
 		cmd := "cd " + dest + ";" + "terraform init"
-		err = util.ExecCmdExample(clientset, config, podNames[0], cmd, os.Stdin, os.Stdout, os.Stderr)
-	}
+		err = util.ExecCmdExample(clientset, config, podNames[0], cmd, nil, &stdout, &stderr)
 
-	if err != nil {
-		log.Error(err, "Failed to Initialize Terraform")
-		return ctrl.Result{}, err
-	} else {
-		apply.Status.Phase = "awating"
+		fmt.Println(stdout.String())
+		fmt.Println(stderr.String())
+
+		if err != nil {
+			log.Error(err, "Failed to Initialize Terraform")
+			apply.Status.Phase = "error"
+			return ctrl.Result{}, err
+		} else {
+			apply.Status.Phase = "awating"
+		}
 	}
 
 	// 3. Terraform Plan
+	if (apply.Status.Phase == "awating" || apply.Status.Phase == "approved" || apply.Status.Phase == "applied") && apply.Spec.Plan == true {
+		stdout.Reset()
+		stderr.Reset()
+
+		//cmd := "terraform init" + " " + opt_terraform
+		cmd := "cd " + dest + ";" + "terraform plan"
+		err = util.ExecCmdExample(clientset, config, podNames[0], cmd, nil, &stdout, &stderr)
+
+		fmt.Println(stdout.String())
+		fmt.Println(stderr.String())
+
+		stdoutStderr := stdout.String() + "\n" + stderr.String()
+
+		if err != nil {
+			log.Error(err, "Failed to Plan Terraform")
+			apply.Status.Phase = "error"
+			return ctrl.Result{}, err
+		} else {
+			apply.Spec.Plan = false
+			apply.Status.Plan = stdoutStderr
+		}
+	}
 
 	// 4. Terraform Apply
-
-	fmt.Println("**CMD LOG***")
-	//fmt.Println(stdin)
-	//fmt.Println(stdout)
-	//fmt.Println(stderr)
-	//fmt.Printf("%s\n", os.Stdout)
-	//fmt.Printf("%s\n", os.Stderr)
-	fmt.Println("************")
-
-	if err != nil {
-		log.Error(err, "Failed to pull Repository")
-		apply.Status.Phase = "error"
-	} else {
-		apply.Status.Phase = "success"
+	if apply.Status.Phase == "awating" && apply.Spec.Apply == true {
+		apply.Status.Phase = "approved"
+		apply.Spec.Apply = false
+		return ctrl.Result{Requeue: true}, nil
 	}
+	if apply.Status.Phase == "approved" {
+		stdout.Reset()
+		stderr.Reset()
+
+		//cmd := "terraform init" + " " + opt_terraform
+		cmd := "cd " + dest + ";" + "terraform apply -auto-approve"
+		err = util.ExecCmdExample(clientset, config, podNames[0], cmd, nil, &stdout, &stderr)
+
+		fmt.Println(stdout.String())
+		fmt.Println(stderr.String())
+
+		stdoutStderr := stdout.String() + "\n" + stderr.String()
+
+		if err != nil {
+			log.Error(err, "Failed to Apply Terraform")
+			apply.Status.Phase = "error"
+			return ctrl.Result{}, err
+		} else {
+			apply.Status.Phase = "applied"
+			apply.Status.Apply = stdoutStderr
+		}
+
+		var matched string
+		var added, changed, destroyed int
+
+		lines := strings.Split(string(stdoutStderr), "\n")
+
+		for i, line := range lines {
+			if strings.Contains(line, "Apply complete!") {
+				matched = lines[i]
+				s := strings.Split(string(matched), " ")
+
+				added, _ = strconv.Atoi(s[3])
+				changed, _ = strconv.Atoi(s[5])
+				destroyed, _ = strconv.Atoi(s[7])
+			}
+		}
+
+		if added > 0 || changed > 0 || destroyed > 0 { // if Terrform State changed
+			stdout.Reset()
+			stderr.Reset()
+
+			//cmd := "terraform init" + " " + opt_terraform
+			cmd = "cd " + dest + ";" +
+				"git config --global user.email " + email + ";" +
+				"git config --global user.name " + id + ";" +
+				"git config --global user.password " + pw + ";" +
+				"git add terraform.tfstate;" +
+				"git commit -m \"Commited by TFApplyClaim Opeator\";" +
+				"git push"
+
+			err = util.ExecCmdExample(clientset, config, podNames[0], cmd, nil, &stdout, &stderr)
+
+			fmt.Println(stdout.String())
+			fmt.Println(stderr.String())
+
+			if err != nil {
+				log.Error(err, "Failed to Push tfstate file")
+				apply.Status.Phase = "error"
+				return ctrl.Result{}, err
+			}
+		}
+	}
+
+	// 5. Terraform Destroy (if required)
+	if apply.Status.Phase == "applied" && apply.Spec.Destroy == true {
+		stdout.Reset()
+		stderr.Reset()
+
+		//cmd := "terraform init" + " " + opt_terraform
+		cmd := "cd " + dest + ";" + "terraform destroy -auto-approve"
+		err = util.ExecCmdExample(clientset, config, podNames[0], cmd, nil, &stdout, &stderr)
+
+		fmt.Println(stdout.String())
+		fmt.Println(stderr.String())
+
+		stdoutStderr := stdout.String() + "\n" + stderr.String()
+
+		if err != nil {
+			log.Error(err, "Failed to Destroy Terraform")
+			apply.Status.Phase = "error"
+			return ctrl.Result{}, err
+		} else {
+			apply.Status.Phase = "awating"
+			apply.Status.Destroy = stdoutStderr
+		}
+	}
+
+	//if err != nil {
+	//	log.Error(err, "Failed to pull Repository")
+	//	apply.Status.Phase = "error"
+	//} else {
+	//	apply.Status.Phase = "success"
+	//}
 
 	// Create Terraform Working Directory
 	//terraDir := util.HCL_DIR + "/" + providerName
