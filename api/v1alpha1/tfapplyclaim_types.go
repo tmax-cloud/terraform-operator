@@ -30,6 +30,7 @@ type TFApplyClaimSpec struct {
 
 	// Foo is an example field of TFApplyClaim. Edit TFApplyClaim_types.go to remove/update
 	Type    string `json:"type,omitempty"`
+	Version string `json:"version,omitempty"`
 	URL     string `json:"url,omitempty"`
 	Branch  string `json:"branch,omitempty"`
 	Email   string `json:"email,omitempty"`

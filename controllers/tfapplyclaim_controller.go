@@ -80,6 +80,12 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 	// your logic here
 	repoType := apply.Spec.Type
+	version := apply.Spec.Version
+
+	if version == "" {
+		version = "0.11.13"
+	}
+
 	url := apply.Spec.URL
 	email := apply.Spec.Email
 	id := apply.Spec.ID
@@ -222,7 +228,35 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		stderr.Reset()
 
 		//cmd := "terraform init" + " " + opt_terraform
-		cmd := "cd " + dest + ";" + "terraform init"
+		name := "terraform"
+		releases := "https://releases.hashicorp.com/terraform"
+
+		cmd := "cd /tmp;" +
+			fmt.Sprintf("wget %s/%s/%s_%s_linux_amd64.zip;", releases, version, name, version) +
+			fmt.Sprintf("wget %s/%s/%s_%s_SHA256SUMS;", releases, version, name, version) +
+			fmt.Sprintf("unzip -d /bin %s_%s_linux_amd64.zip;", name, version) +
+			"rm -rf /tmp/build;"
+
+		fmt.Println("CMD:" + cmd)
+
+		err = util.ExecCmdExample(clientset, config, podNames[0], cmd, nil, &stdout, &stderr)
+
+		fmt.Println(stdout.String())
+		fmt.Println(stderr.String())
+
+		if err != nil {
+			log.Error(err, "Failed to Initialize Terraform")
+			apply.Status.Phase = "error"
+			return ctrl.Result{}, err
+		} else {
+			apply.Status.Phase = "awating"
+		}
+
+		stdout.Reset()
+		stderr.Reset()
+
+		//cmd := "terraform init" + " " + opt_terraform
+		cmd = "cd " + dest + ";" + "terraform init"
 		err = util.ExecCmdExample(clientset, config, podNames[0], cmd, nil, &stdout, &stderr)
 
 		fmt.Println(stdout.String())
@@ -390,7 +424,7 @@ func (r *TFApplyClaimReconciler) deploymentForApply(m *claimv1alpha1.TFApplyClai
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
-						Image:           "192.168.6.197:5000/ubuntu:0.1",
+						Image:           "192.168.6.197:5000/ubuntu:0.2",
 						Name:            "ubuntu",
 						Command:         []string{"/bin/sleep", "3650d"},
 						ImagePullPolicy: "Always",

@@ -59,6 +59,8 @@ spec:
               type: string
             url:
               type: string
+            version:
+              type: string
           type: object
         status:
           description: TFApplyClaimStatus defines the observed state of TFApplyClaim
