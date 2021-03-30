@@ -20,7 +20,7 @@ import (
 )
 
 // ExecCmd exec command on specific pod and wait the command's output.
-func ExecCmdExample(client kubernetes.Interface, config *restclient.Config, podName string,
+func ExecCmdExample(client kubernetes.Interface, config *restclient.Config, podName string, podNamespace string,
 	command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 
 	fmt.Println("ExecCmdExample Start!!")
@@ -32,7 +32,9 @@ func ExecCmdExample(client kubernetes.Interface, config *restclient.Config, podN
 		command,
 	}
 	req := client.CoreV1().RESTClient().Post().Resource("pods").Name(podName).
-		Namespace("default").SubResource("exec")
+		Namespace(podNamespace).SubResource("exec")
+	//req := client.CoreV1().RESTClient().Post().Resource("pods").Name(podName).
+	//	Namespace("default").SubResource("exec")
 
 	fmt.Println("ExecCmdExample (1)")
 	option := &v1.PodExecOptions{

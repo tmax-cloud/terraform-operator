@@ -33,13 +33,14 @@ type TFApplyClaimSpec struct {
 	Version string `json:"version,omitempty"`
 	URL     string `json:"url,omitempty"`
 	Branch  string `json:"branch,omitempty"`
-	Email   string `json:"email,omitempty"`
-	ID      string `json:"id,omitempty"`
-	PW      string `json:"pw,omitempty"`
-	Size    int32  `json:"size,omitempty"`
-	Plan    bool   `json:"plan,omitempty"`
-	Apply   bool   `json:"apply,omitempty"`
-	Destroy bool   `json:"destroy,omitempty"`
+	//Email   string `json:"email,omitempty"`
+	//ID      string `json:"id,omitempty"`
+	//PW      string `json:"pw,omitempty"`
+	Secret string `json:"secret,omitempty"`
+	//Size    int32  `json:"size,omitempty"`
+	//Plan    bool   `json:"plan,omitempty"`
+	//Apply   bool   `json:"apply,omitempty"`
+	Destroy bool `json:"destroy,omitempty"`
 }
 
 // TFApplyClaimStatus defines the observed state of TFApplyClaim
@@ -47,10 +48,18 @@ type TFApplyClaimStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	Nodes   []string `json:"nodes,omitempty"`
+	Action  string   `json:"action,omitempty"`
 	Phase   string   `json:"phase,omitempty"`
-	Plan    string   `json:"plan,omitempty"`
+	Plans   []Plan   `json:"plans,omitempty"`
 	Apply   string   `json:"apply,omitempty"`
 	Destroy string   `json:"destroy,omitempty"`
+	State   string   `json:"state,omitempty"`
+	Commit  string   `json:"commit,omitempty"`
+}
+
+type Plan struct {
+	LastExectionTime string `json:"lastexectiontime,omitempty"`
+	Log              string `json:"log,omitempty"`
 }
 
 // +kubebuilder:object:root=true

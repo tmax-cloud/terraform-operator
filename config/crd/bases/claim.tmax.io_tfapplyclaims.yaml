@@ -65,6 +65,8 @@ spec:
         status:
           description: TFApplyClaimStatus defines the observed state of TFApplyClaim
           properties:
+            action:
+              type: string
             apply:
               type: string
             destroy:
@@ -78,7 +80,16 @@ spec:
               type: array
             phase:
               type: string
-            plan:
+            plans:
+              items:
+                properties:
+                  lastexectiontime:
+                    type: string
+                  log:
+                    type: string
+                type: object
+              type: array
+            state:
               type: string
           type: object
       type: object

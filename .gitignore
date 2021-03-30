@@ -31,3 +31,6 @@ delete.sh
 
 # Sample Yaml
 sample/
+
+# Test Script
+test/
