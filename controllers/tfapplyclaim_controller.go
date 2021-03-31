@@ -95,7 +95,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	//pw := apply.Spec.PW
 	branch := apply.Spec.Branch
 	//secret := apply.Spec.Secret
-	dest := "working_dir"
+	dest := "HCL_DIR"
 	//opt_terraform := "-chdir=/" + dest // only terrform 0.14+
 
 	fmt.Println(repoType)
@@ -145,7 +145,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 		// Ensure the deployment size is the same as the spec
 		size := int32(1)
-		if apply.Status.Phase == "applied" && apply.Spec.Destroy == false {
+		if (apply.Status.Phase == "applied" || apply.Status.Phase == "destroyed") && apply.Spec.Destroy == false {
 			size = 0
 		}
 		if *found.Spec.Replicas != size {
@@ -175,6 +175,11 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		if len(podNames) < 1 {
 			log.Info("Not yet create Terraform Pod...")
 			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+		} else if len(podNames) > 1 {
+			log.Info("Not yet terminate Previous Terraform Pod...")
+			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+		} else {
+			log.Info("Ready to Execute Terraform Pod!")
 		}
 
 		fmt.Println("5 seconds delay....")
@@ -337,7 +342,6 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 				apply.Status.Phase = "error"
 				return ctrl.Result{}, err
 			} else {
-				apply.Status.Action = ""
 				apply.Status.Phase = "planned"
 				// add plan to plans
 				var plan claimv1alpha1.Plan
@@ -347,7 +351,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 				capacity = 5
 
 				if len(apply.Status.Plans) == capacity {
-					dequeuePlan(apply.Status.Plans, capacity)
+					apply.Status.Plans = dequeuePlan(apply.Status.Plans, capacity)
 				}
 				apply.Status.Plans = append([]claimv1alpha1.Plan{plan}, apply.Status.Plans...)
 				//apply.Status.Plans = append(apply.Status.Plans, plan)
@@ -447,7 +451,8 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			stdout.Reset()
 			stderr.Reset()
 
-			cmd = "git log --pretty=format:\"%H\" | head -n 1"
+			cmd = "cd " + dest + ";" +
+				"git log --pretty=format:\"%H\" | head -n 1"
 
 			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
@@ -458,17 +463,94 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 				apply.Status.Phase = "error"
 				return ctrl.Result{}, err
 			} else {
-				apply.Status.Commit = stdout.String()
+				apply.Status.Commit = strings.TrimRight(stdout.String(), "\r\n")
 			}
 		}
 
 		// 5. Terraform Destroy (if required)
 		if apply.Status.Phase == "applied" && apply.Spec.Destroy == true {
+			if repoType == "private" {
+				var protocol string
+
+				if strings.Contains(url, "http://") {
+					protocol = "http://"
+				} else if strings.Contains(url, "https://") {
+					protocol = "https://"
+				}
+
+				url = strings.TrimLeft(url, protocol)
+				//url = protocol + id + ":" + pw + "@" + url
+				url = protocol + "$GIT_ID:$GIT_PW" + "@" + url
+			}
+
+			stdout.Reset()
+			stderr.Reset()
+
+			cmd := "git config --global user.email $GIT_EMAIL;" +
+				"git config --global user.name $GIT_NAME;" +
+				"git config --global user.password $GIT_PW;" +
+				"git clone " + url + " " + dest
+			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+
+			fmt.Println(stdout.String())
+			fmt.Println(stderr.String())
+
+			if err != nil {
+				log.Error(err, "Failed to Clone Git Repository")
+				apply.Status.Phase = "error"
+				return ctrl.Result{}, err
+			} else {
+				apply.Status.Phase = "cloned"
+			}
+
+			stdout.Reset()
+			stderr.Reset()
+
+			//cmd := "terraform init" + " " + opt_terraform
+			name := "terraform"
+			releases := "https://releases.hashicorp.com/terraform"
+
+			cmd = "cd /tmp;" +
+				fmt.Sprintf("wget %s/%s/%s_%s_linux_amd64.zip;", releases, version, name, version) +
+				fmt.Sprintf("wget %s/%s/%s_%s_SHA256SUMS;", releases, version, name, version) +
+				fmt.Sprintf("unzip -d /bin %s_%s_linux_amd64.zip;", name, version) +
+				"rm -rf /tmp/build;"
+
+			fmt.Println("CMD:" + cmd)
+
+			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+
+			fmt.Println(stdout.String())
+			fmt.Println(stderr.String())
+
+			if err != nil {
+				log.Error(err, "Failed to Initialize Terraform")
+				apply.Status.Phase = "error"
+				return ctrl.Result{}, err
+			}
+
+			stdout.Reset()
+			stderr.Reset()
+
+			//cmd := "terraform init" + " " + opt_terraform
+			cmd = "cd " + dest + ";" + "terraform init"
+			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+
+			fmt.Println(stdout.String())
+			fmt.Println(stderr.String())
+
+			if err != nil {
+				log.Error(err, "Failed to Initialize Terraform")
+				apply.Status.Phase = "error"
+				return ctrl.Result{}, err
+			}
+
 			// Revert to Commit Point
 			stdout.Reset()
 			stderr.Reset()
 
-			cmd := "git reset " + apply.Status.Commit
+			cmd = "cd " + dest + ";" +
+				"git reset " + apply.Status.Commit
 
 			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
@@ -497,6 +579,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 				apply.Status.Phase = "error"
 				return ctrl.Result{}, err
 			} else {
+				apply.Spec.Destroy = false
 				apply.Status.Phase = "destroyed"
 				apply.Status.Destroy = stdoutStderr
 			}
@@ -574,6 +657,8 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		// Create Terraform Working Directory
 		//terraDir := util.HCL_DIR + "/" + providerName
 	}
+
+	apply.Status.Action = ""
 	fmt.Println("**END OF RECONCILE LOOP***")
 	return ctrl.Result{RequeueAfter: time.Second * 60}, nil // Reconcile loop rescheduled after 60 seconds
 
@@ -669,6 +754,10 @@ func (r *TFApplyClaimReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func dequeuePlan(slice []v1alpha1.Plan, capacity int) []v1alpha1.Plan {
-	return slice[:(capacity - 1)]
+	//fmt.Println("TEST1")
+	fmt.Println(slice[1:])
+	//fmt.Println("TEST2")
+	fmt.Println(slice[:capacity-1])
+	return slice[:capacity-1]
 	//return append(slice[:0], slice[1:]...)
 }

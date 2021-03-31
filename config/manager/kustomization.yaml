@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: 192.168.6.197:5000/tfapplyclaim-operator
-  newTag: v0.3.9
+  newTag: v0.4.7
