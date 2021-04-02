@@ -47,19 +47,26 @@ type TFApplyClaimSpec struct {
 type TFApplyClaimStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Nodes   []string `json:"nodes,omitempty"`
-	Action  string   `json:"action,omitempty"`
-	Phase   string   `json:"phase,omitempty"`
-	Plans   []Plan   `json:"plans,omitempty"`
-	Apply   string   `json:"apply,omitempty"`
-	Destroy string   `json:"destroy,omitempty"`
-	State   string   `json:"state,omitempty"`
-	Commit  string   `json:"commit,omitempty"`
+	Nodes    []string `json:"nodes,omitempty"`
+	Action   string   `json:"action,omitempty"`
+	Phase    string   `json:"phase,omitempty"`
+	Plans    []Plan   `json:"plans,omitempty"`
+	Apply    string   `json:"apply,omitempty"`
+	Destroy  string   `json:"destroy,omitempty"`
+	State    string   `json:"state,omitempty"`
+	Commit   string   `json:"commit,omitempty"`
+	Resource Resource `json:"resource,omitempty"`
 }
 
 type Plan struct {
 	LastExectionTime string `json:"lastexectiontime,omitempty"`
 	Log              string `json:"log,omitempty"`
+}
+
+type Resource struct {
+	Added   int `json:"added,omitempty"`
+	Updated int `json:"updated,omitempty"`
+	Deleted int `json:"deleted,omitempty"`
 }
 
 // +kubebuilder:object:root=true

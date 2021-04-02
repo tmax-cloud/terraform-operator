@@ -114,16 +114,16 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}()
 
 	if apply.Status.Phase == "" {
-		apply.Status.Phase = "awaiting"
+		apply.Status.Phase = "Awaiting"
 		return ctrl.Result{Requeue: true}, nil
 	}
-	if apply.Status.Phase == "awaiting" && apply.Status.Action == "approve" {
+	if apply.Status.Phase == "Awaiting" && apply.Status.Action == "Approve" {
 		fmt.Println("test-log")
-		apply.Status.Phase = "approved"
+		apply.Status.Phase = "Approved"
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	if apply.Status.Phase != "awaiting" {
+	if apply.Status.Phase != "Awaiting" {
 		// Check if the deployment already exists, if not create a new one
 		found := &appsv1.Deployment{}
 		err = r.Get(ctx, types.NamespacedName{Name: apply.Name, Namespace: apply.Namespace}, found)
@@ -145,7 +145,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 		// Ensure the deployment size is the same as the spec
 		size := int32(1)
-		if (apply.Status.Phase == "applied" || apply.Status.Phase == "destroyed") && apply.Spec.Destroy == false {
+		if (apply.Status.Phase == "Applied" || apply.Status.Phase == "Destroyed") && apply.Spec.Destroy == false {
 			size = 0
 		}
 		if *found.Spec.Replicas != size {
@@ -174,10 +174,10 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 		if len(podNames) < 1 {
 			log.Info("Not yet create Terraform Pod...")
-			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 		} else if len(podNames) > 1 {
 			log.Info("Not yet terminate Previous Terraform Pod...")
-			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+			return ctrl.Result{RequeueAfter: time.Second * 5}, nil
 		} else {
 			log.Info("Ready to Execute Terraform Pod!")
 		}
@@ -213,7 +213,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 		// Go Client - POD EXEC
 		// 1. Git Clone Repository
-		if apply.Status.Phase == "approved" && apply.Status.Action == "approve" {
+		if apply.Status.Phase == "Approved" && apply.Status.Action == "Approve" {
 			if repoType == "private" {
 				var protocol string
 
@@ -242,15 +242,15 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 			if err != nil {
 				log.Error(err, "Failed to Clone Git Repository")
-				apply.Status.Phase = "error"
+				apply.Status.Phase = "Error"
 				return ctrl.Result{}, err
 			} else {
-				apply.Status.Phase = "cloned"
+				apply.Status.Phase = "Cloned"
 			}
 		}
 
 		// 2. Terraform Initialization
-		if apply.Status.Phase == "cloned" {
+		if apply.Status.Phase == "Cloned" {
 			stdout.Reset()
 			stderr.Reset()
 
@@ -273,7 +273,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 			if err != nil {
 				log.Error(err, "Failed to Initialize Terraform")
-				apply.Status.Phase = "error"
+				apply.Status.Phase = "Error"
 				return ctrl.Result{}, err
 			}
 
@@ -289,15 +289,15 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 			if err != nil {
 				log.Error(err, "Failed to Initialize Terraform")
-				apply.Status.Phase = "error"
+				apply.Status.Phase = "Error"
 				return ctrl.Result{}, err
 			} else {
-				apply.Status.Phase = "ready"
+				apply.Status.Phase = "Ready"
 			}
 		}
 
 		// 3. Terraform Plan
-		if (apply.Status.Phase == "ready" || apply.Status.Phase == "planned") && apply.Status.Action == "plan" {
+		if (apply.Status.Phase == "Ready" || apply.Status.Phase == "Planned") && apply.Status.Action == "Plan" {
 			stdout.Reset()
 			stderr.Reset()
 
@@ -309,7 +309,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 			if err != nil {
 				log.Error(err, "Failed to Pull Git Repository")
-				apply.Status.Phase = "error"
+				apply.Status.Phase = "Error"
 				return ctrl.Result{}, err
 			}
 
@@ -321,7 +321,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 			if err != nil {
 				log.Error(err, "Failed to Initialize Terraform")
-				apply.Status.Phase = "error"
+				apply.Status.Phase = "Error"
 				return ctrl.Result{}, err
 			}
 
@@ -339,10 +339,10 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 			if err != nil {
 				log.Error(err, "Failed to Plan Terraform")
-				apply.Status.Phase = "error"
+				apply.Status.Phase = "Error"
 				return ctrl.Result{}, err
 			} else {
-				apply.Status.Phase = "planned"
+				apply.Status.Phase = "Planned"
 				// add plan to plans
 				var plan claimv1alpha1.Plan
 				plan.LastExectionTime = time.Now().String()
@@ -365,7 +365,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		//	apply.Spec.Apply = false
 		//	return ctrl.Result{Requeue: true}, nil
 		//}
-		if (apply.Status.Phase == "ready" || apply.Status.Phase == "planned") && apply.Status.Action == "apply" {
+		if (apply.Status.Phase == "Ready" || apply.Status.Phase == "Planned") && apply.Status.Action == "Apply" {
 			stdout.Reset()
 			stderr.Reset()
 
@@ -380,10 +380,10 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 			if err != nil {
 				log.Error(err, "Failed to Apply Terraform")
-				apply.Status.Phase = "error"
+				apply.Status.Phase = "Error"
 				return ctrl.Result{}, err
 			} else {
-				apply.Status.Phase = "applied"
+				apply.Status.Phase = "Applied"
 				apply.Status.Apply = stdoutStderr
 			}
 
@@ -423,7 +423,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 				if err != nil {
 					log.Error(err, "Failed to Push tfstate file")
-					apply.Status.Phase = "error"
+					apply.Status.Phase = "Error"
 					return ctrl.Result{}, err
 				}
 			}
@@ -441,10 +441,13 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 			if err != nil {
 				log.Error(err, "Failed to Read tfstate file")
-				apply.Status.Phase = "error"
+				apply.Status.Phase = "Error"
 				return ctrl.Result{}, err
 			} else {
 				apply.Status.State = stdout.String()
+				apply.Status.Resource.Added = added
+				apply.Status.Resource.Updated = changed
+				apply.Status.Resource.Deleted = destroyed
 			}
 
 			// Get Commit ID
@@ -460,7 +463,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 			if err != nil {
 				log.Error(err, "Failed to Get Commit ID")
-				apply.Status.Phase = "error"
+				apply.Status.Phase = "Error"
 				return ctrl.Result{}, err
 			} else {
 				apply.Status.Commit = strings.TrimRight(stdout.String(), "\r\n")
@@ -468,7 +471,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		}
 
 		// 5. Terraform Destroy (if required)
-		if apply.Status.Phase == "applied" && apply.Spec.Destroy == true {
+		if apply.Status.Phase == "Applied" && apply.Spec.Destroy == true {
 			if repoType == "private" {
 				var protocol string
 
@@ -497,10 +500,8 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 			if err != nil {
 				log.Error(err, "Failed to Clone Git Repository")
-				apply.Status.Phase = "error"
+				apply.Status.Phase = "Error"
 				return ctrl.Result{}, err
-			} else {
-				apply.Status.Phase = "cloned"
 			}
 
 			stdout.Reset()
@@ -525,7 +526,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 			if err != nil {
 				log.Error(err, "Failed to Initialize Terraform")
-				apply.Status.Phase = "error"
+				apply.Status.Phase = "Error"
 				return ctrl.Result{}, err
 			}
 
@@ -541,7 +542,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 			if err != nil {
 				log.Error(err, "Failed to Initialize Terraform")
-				apply.Status.Phase = "error"
+				apply.Status.Phase = "Error"
 				return ctrl.Result{}, err
 			}
 
@@ -558,7 +559,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 			if err != nil {
 				log.Error(err, "Failed to Revert Commit")
-				apply.Status.Phase = "error"
+				apply.Status.Phase = "Error"
 				return ctrl.Result{}, err
 			}
 
@@ -576,30 +577,31 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 			if err != nil {
 				log.Error(err, "Failed to Destroy Terraform")
-				apply.Status.Phase = "error"
+				apply.Status.Phase = "Error"
 				return ctrl.Result{}, err
 			} else {
 				apply.Spec.Destroy = false
-				apply.Status.Phase = "destroyed"
+				apply.Status.Phase = "Destroyed"
 				apply.Status.Destroy = stdoutStderr
 			}
-			/*
-				var matched string
-				var added, changed, destroyed int
 
-				lines := strings.Split(string(stdoutStderr), "\n")
+			var matched string
+			var added, changed, destroyed int
 
-				for i, line := range lines {
-					if strings.Contains(line, "Destroy complete!") {
-						matched = lines[i]
-						s := strings.Split(string(matched), " ")
+			lines := strings.Split(string(stdoutStderr), "\n")
 
-						added, _ = strconv.Atoi(s[3])
-						changed, _ = strconv.Atoi(s[5])
-						destroyed, _ = strconv.Atoi(s[7])
-					}
+			for i, line := range lines {
+				if strings.Contains(line, "Destroy complete!") {
+					matched = lines[i]
+					s := strings.Split(string(matched), " ")
+
+					//added, _ = strconv.Atoi(s[3])
+					//changed, _ = strconv.Atoi(s[5])
+					//destroyed, _ = strconv.Atoi(s[7])
+					destroyed, _ = strconv.Atoi(s[3])
 				}
-
+			}
+			/*
 				if added > 0 || changed > 0 || destroyed > 0 { // if Terrform State changed
 					stdout.Reset()
 					stderr.Reset()
@@ -624,27 +626,29 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 						return ctrl.Result{}, err
 					}
 				}
-
-				stdout.Reset()
-				stderr.Reset()
-
-				//cmd := "terraform init" + " " + opt_terraform
-				cmd = "cd " + dest + ";" +
-					"cat terraform.tfstate"
-
-				err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
-
-				fmt.Println(stdout.String())
-
-				if err != nil {
-					log.Error(err, "Failed to Read tfstate file")
-					apply.Status.Phase = "error"
-					return ctrl.Result{}, err
-				} else {
-					apply.Status.Phase = "applied"
-					apply.Status.Apply = stdout.String()
-				}
 			*/
+			stdout.Reset()
+			stderr.Reset()
+
+			//cmd := "terraform init" + " " + opt_terraform
+			cmd = "cd " + dest + ";" +
+				"cat terraform.tfstate"
+
+			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+
+			fmt.Println(stdout.String())
+
+			if err != nil {
+				log.Error(err, "Failed to Read tfstate file")
+				apply.Status.Phase = "Error"
+				return ctrl.Result{}, err
+			} else {
+				apply.Status.State = stdout.String()
+				apply.Status.Resource.Added = added
+				apply.Status.Resource.Updated = changed
+				apply.Status.Resource.Deleted = destroyed
+			}
+
 		}
 
 		//if err != nil {
