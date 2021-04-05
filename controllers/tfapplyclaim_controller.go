@@ -117,13 +117,13 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		apply.Status.Phase = "Awaiting"
 		return ctrl.Result{Requeue: true}, nil
 	}
-	if apply.Status.Phase == "Awaiting" && apply.Status.Action == "Approve" {
-		fmt.Println("test-log")
-		apply.Status.Phase = "Approved"
-		return ctrl.Result{Requeue: true}, nil
-	}
+	//if apply.Status.Phase == "Awaiting" && apply.Status.Action == "Approve" {
+	//	fmt.Println("test-log")
+	//	apply.Status.Phase = "Approving"
+	//	return ctrl.Result{Requeue: true}, nil
+	//}
 
-	if apply.Status.Phase != "Awaiting" {
+	if apply.Status.Phase != "Awaiting" || (apply.Status.Phase == "Awaiting" && apply.Status.Action == "Approve") {
 		// Check if the deployment already exists, if not create a new one
 		found := &appsv1.Deployment{}
 		err = r.Get(ctx, types.NamespacedName{Name: apply.Name, Namespace: apply.Namespace}, found)
@@ -213,7 +213,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 		// Go Client - POD EXEC
 		// 1. Git Clone Repository
-		if apply.Status.Phase == "Approved" && apply.Status.Action == "Approve" {
+		if apply.Status.Phase == "Awaiting" && apply.Status.Action == "Approve" {
 			if repoType == "private" {
 				var protocol string
 
@@ -243,14 +243,13 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Clone Git Repository")
 				apply.Status.Phase = "Error"
+				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
-			} else {
-				apply.Status.Phase = "Cloned"
 			}
-		}
+			//}
 
-		// 2. Terraform Initialization
-		if apply.Status.Phase == "Cloned" {
+			// 2. Terraform Initialization
+			//if apply.Status.Phase == "Cloned" {
 			stdout.Reset()
 			stderr.Reset()
 
@@ -258,7 +257,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			name := "terraform"
 			releases := "https://releases.hashicorp.com/terraform"
 
-			cmd := "cd /tmp;" +
+			cmd = "cd /tmp;" +
 				fmt.Sprintf("wget %s/%s/%s_%s_linux_amd64.zip;", releases, version, name, version) +
 				fmt.Sprintf("wget %s/%s/%s_%s_SHA256SUMS;", releases, version, name, version) +
 				fmt.Sprintf("unzip -d /bin %s_%s_linux_amd64.zip;", name, version) +
@@ -274,6 +273,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Initialize Terraform")
 				apply.Status.Phase = "Error"
+				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			}
 
@@ -290,14 +290,17 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Initialize Terraform")
 				apply.Status.Phase = "Error"
+				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			} else {
-				apply.Status.Phase = "Ready"
+				apply.Status.Phase = "Approved"
 			}
 		}
+		//}
 
 		// 3. Terraform Plan
-		if (apply.Status.Phase == "Ready" || apply.Status.Phase == "Planned") && apply.Status.Action == "Plan" {
+		//if (apply.Status.Phase == "Ready" || apply.Status.Phase == "Planned") && apply.Status.Action == "Plan" {
+		if (apply.Status.Phase == "Approved" || apply.Status.Phase == "Planned") && apply.Status.Action == "Plan" {
 			stdout.Reset()
 			stderr.Reset()
 
@@ -310,6 +313,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Pull Git Repository")
 				apply.Status.Phase = "Error"
+				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			}
 
@@ -322,6 +326,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Initialize Terraform")
 				apply.Status.Phase = "Error"
+				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			}
 
@@ -340,6 +345,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Plan Terraform")
 				apply.Status.Phase = "Error"
+				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			} else {
 				apply.Status.Phase = "Planned"
@@ -365,7 +371,8 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		//	apply.Spec.Apply = false
 		//	return ctrl.Result{Requeue: true}, nil
 		//}
-		if (apply.Status.Phase == "Ready" || apply.Status.Phase == "Planned") && apply.Status.Action == "Apply" {
+		//if (apply.Status.Phase == "Ready" || apply.Status.Phase == "Planned") && apply.Status.Action == "Apply" {
+		if (apply.Status.Phase == "Approved" || apply.Status.Phase == "Planned") && apply.Status.Action == "Apply" {
 			stdout.Reset()
 			stderr.Reset()
 
@@ -381,9 +388,9 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Apply Terraform")
 				apply.Status.Phase = "Error"
+				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			} else {
-				apply.Status.Phase = "Applied"
 				apply.Status.Apply = stdoutStderr
 			}
 
@@ -402,32 +409,32 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 					destroyed, _ = strconv.Atoi(s[7])
 				}
 			}
+			/*
+				if added > 0 || changed > 0 || destroyed > 0 { // if Terrform State changed
+					stdout.Reset()
+					stderr.Reset()
 
-			if added > 0 || changed > 0 || destroyed > 0 { // if Terrform State changed
-				stdout.Reset()
-				stderr.Reset()
+					//cmd := "terraform init" + " " + opt_terraform
+					cmd = "cd " + dest + ";" +
+						"git config --global user.email $GIT_EMAIL;" +
+						"git config --global user.name $GIT_NAME;" +
+						"git config --global user.password $GIT_PW;" +
+						"git add terraform.tfstate;" +
+						"git commit -m \"Commited by TFApplyClaim Opeator\";" +
+						"git push"
 
-				//cmd := "terraform init" + " " + opt_terraform
-				cmd = "cd " + dest + ";" +
-					"git config --global user.email $GIT_EMAIL;" +
-					"git config --global user.name $GIT_NAME;" +
-					"git config --global user.password $GIT_PW;" +
-					"git add terraform.tfstate;" +
-					"git commit -m \"Commited by TFApplyClaim Opeator\";" +
-					"git push"
+					err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
-				err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+					fmt.Println(stdout.String())
+					fmt.Println(stderr.String())
 
-				fmt.Println(stdout.String())
-				fmt.Println(stderr.String())
-
-				if err != nil {
-					log.Error(err, "Failed to Push tfstate file")
-					apply.Status.Phase = "Error"
-					return ctrl.Result{}, err
+					if err != nil {
+						log.Error(err, "Failed to Push tfstate file")
+						apply.Status.Phase = "Error"
+						return ctrl.Result{}, err
+					}
 				}
-			}
-
+			*/
 			stdout.Reset()
 			stderr.Reset()
 
@@ -464,9 +471,11 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Get Commit ID")
 				apply.Status.Phase = "Error"
+				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			} else {
 				apply.Status.Commit = strings.TrimRight(stdout.String(), "\r\n")
+				apply.Status.Phase = "Applied"
 			}
 		}
 
@@ -501,6 +510,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Clone Git Repository")
 				apply.Status.Phase = "Error"
+				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			}
 
@@ -527,6 +537,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Initialize Terraform")
 				apply.Status.Phase = "Error"
+				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			}
 
@@ -543,6 +554,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Initialize Terraform")
 				apply.Status.Phase = "Error"
+				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			}
 
@@ -560,6 +572,26 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Revert Commit")
 				apply.Status.Phase = "Error"
+				apply.Status.Log = err.Error()
+				return ctrl.Result{}, err
+			}
+
+			// Recover Terraform State
+			stdout.Reset()
+			stderr.Reset()
+
+			cmd = "cd " + dest + ";" +
+				"cat > terraform.tfstate << EOL\n" +
+				apply.Status.State + "EOL"
+
+			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+
+			fmt.Println(stdout.String())
+
+			if err != nil {
+				log.Error(err, "Failed to Recover Terraform State")
+				apply.Status.Phase = "Error"
+				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			}
 
@@ -578,10 +610,9 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Destroy Terraform")
 				apply.Status.Phase = "Error"
+				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			} else {
-				apply.Spec.Destroy = false
-				apply.Status.Phase = "Destroyed"
 				apply.Status.Destroy = stdoutStderr
 			}
 
@@ -641,12 +672,16 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Read tfstate file")
 				apply.Status.Phase = "Error"
+				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			} else {
 				apply.Status.State = stdout.String()
 				apply.Status.Resource.Added = added
 				apply.Status.Resource.Updated = changed
 				apply.Status.Resource.Deleted = destroyed
+
+				apply.Spec.Destroy = false
+				apply.Status.Phase = "Destroyed"
 			}
 
 		}

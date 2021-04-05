@@ -66,6 +66,8 @@ spec:
               type: string
             destroy:
               type: string
+            log:
+              type: string
             nodes:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
                 of cluster Important: Run "make" to regenerate code after modifying
@@ -84,6 +86,15 @@ spec:
                     type: string
                 type: object
               type: array
+            resource:
+              properties:
+                added:
+                  type: integer
+                deleted:
+                  type: integer
+                updated:
+                  type: integer
+              type: object
             state:
               type: string
           type: object

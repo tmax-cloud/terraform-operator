@@ -56,6 +56,7 @@ type TFApplyClaimStatus struct {
 	State    string   `json:"state,omitempty"`
 	Commit   string   `json:"commit,omitempty"`
 	Resource Resource `json:"resource,omitempty"`
+	Log      string   `json:"log,omitempty"`
 }
 
 type Plan struct {
