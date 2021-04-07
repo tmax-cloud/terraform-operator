@@ -34,3 +34,6 @@ sample/
 
 # Test Script
 test/
+
+# Deploy
+deploy/

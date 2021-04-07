@@ -165,6 +165,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		listOpts := []client.ListOption{
 			client.InNamespace(apply.Namespace),
 			client.MatchingLabels(labelsForApply(apply.Name)),
+			client.MatchingFields{"status.phase": "Running"},
 		}
 		if err = r.List(ctx, podList, listOpts...); err != nil {
 			log.Error(err, "Failed to list pods", "TFApplyClaim.Namespace", apply.Namespace, "TFApplyClaim.Name", apply.Name)
@@ -787,8 +788,18 @@ func getPodNames(pods []corev1.Pod) []string {
 }
 
 func (r *TFApplyClaimReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &corev1.Pod{}, "status.phase", func(rawObj runtime.Object) []string {
+		pod := rawObj.(*corev1.Pod)
+		return []string{string(pod.Status.DeepCopy().Phase)}
+	}); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&claimv1alpha1.TFApplyClaim{}).
+		Owns(&appsv1.Deployment{}).
+		Owns(&corev1.Pod{}).
 		Complete(r)
 }
 
