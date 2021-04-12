@@ -109,11 +109,21 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 	defer func() {
 		if err := helper.Patch(ctx, apply); err != nil {
-			log.Error(err, "apply patch error")
+			log.Error(err, "TFApplyClaim patch error")
+			///
+			apply.Status.Phase = "Error"
+			apply.Status.Action = ""
+			apply.Status.Log = err.Error()
+
+			err := r.Status().Update(ctx, apply)
+			if err != nil {
+				log.Error(err, "Failed to update TFApplyClaim status")
+			}
+			///
 		}
 	}()
 
-	if apply.Status.Phase == "" {
+	if apply.Status.Phase == "" || (apply.Status.Phase == "Error" && apply.Status.Action == "Approve") {
 		apply.Status.Phase = "Awaiting"
 		return ctrl.Result{Requeue: true}, nil
 	}
@@ -122,6 +132,23 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	//	apply.Status.Phase = "Approving"
 	//	return ctrl.Result{Requeue: true}, nil
 	//}
+
+	/*
+		if apply.Status.Phase == "Awaiting" && apply.Status.Action == "Test" {
+			fmt.Println("5 seconds delay....")
+			time.Sleep(time.Second * 5)
+
+			tmp := apply.Status.Apply
+			test := "testdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsl"
+			tmp = tmp + test
+
+			fmt.Println("ADD SIZE" + strconv.Itoa(len(test)))
+			fmt.Println("Total SIZE" + strconv.Itoa(len(tmp)))
+
+			apply.Status.Apply = tmp
+			return ctrl.Result{Requeue: true}, nil
+		}
+	*/
 
 	if apply.Status.Phase != "Awaiting" || (apply.Status.Phase == "Awaiting" && apply.Status.Action == "Approve") {
 		// Check if the deployment already exists, if not create a new one
@@ -200,12 +227,18 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		config, err := rest.InClusterConfig()
 		if err != nil {
 			log.Error(err, "Failed to create in-cluster config")
+			apply.Status.Phase = "Error"
+			apply.Status.Action = ""
+			apply.Status.Log = err.Error()
 			return ctrl.Result{}, err
 		}
 		// creates the clientset
 		clientset, err := kubernetes.NewForConfig(config)
 		if err != nil {
 			log.Error(err, "Failed to create clientset")
+			apply.Status.Phase = "Error"
+			apply.Status.Action = ""
+			apply.Status.Log = err.Error()
 			return ctrl.Result{}, err
 		}
 
@@ -213,8 +246,9 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		//err = util.ExecCmdExample(clientset, config, podNames[0], cmd, os.Stdin, os.Stdout, os.Stderr)
 
 		// Go Client - POD EXEC
-		// 1. Git Clone Repository
 		if apply.Status.Phase == "Awaiting" && apply.Status.Action == "Approve" {
+
+			// 1. Git Clone Repository
 			if repoType == "private" {
 				var protocol string
 
@@ -232,10 +266,11 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			stdout.Reset()
 			stderr.Reset()
 
-			cmd := "git config --global user.email $GIT_EMAIL;" +
-				"git config --global user.name $GIT_NAME;" +
-				"git config --global user.password $GIT_PW;" +
-				"git clone " + url + " " + dest
+			//cmd := "git config --global user.email $GIT_EMAIL;" +
+			//	"git config --global user.name $GIT_NAME;" +
+			//	"git config --global user.password $GIT_PW;" +
+			//	"git clone " + url + " " + dest
+			cmd := "git clone " + url + " " + dest
 			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 			fmt.Println(stdout.String())
@@ -244,11 +279,30 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Clone Git Repository")
 				apply.Status.Phase = "Error"
+				apply.Status.Action = ""
 				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			}
 			//}
 
+			if apply.Spec.Branch != "" {
+				stdout.Reset()
+				stderr.Reset()
+
+				cmd = "cd " + dest + ";" + "git checkout -t origin/" + apply.Spec.Branch
+				err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+
+				fmt.Println(stdout.String())
+				fmt.Println(stderr.String())
+
+				if err != nil {
+					log.Error(err, "Failed to Checkout Git Branch")
+					apply.Status.Phase = "Error"
+					apply.Status.Action = ""
+					apply.Status.Log = err.Error()
+					return ctrl.Result{}, err
+				}
+			}
 			// 2. Terraform Initialization
 			//if apply.Status.Phase == "Cloned" {
 			stdout.Reset()
@@ -274,6 +328,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Initialize Terraform")
 				apply.Status.Phase = "Error"
+				apply.Status.Action = ""
 				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			}
@@ -291,6 +346,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Initialize Terraform")
 				apply.Status.Phase = "Error"
+				apply.Status.Action = ""
 				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			} else {
@@ -314,6 +370,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Pull Git Repository")
 				apply.Status.Phase = "Error"
+				apply.Status.Action = ""
 				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			}
@@ -327,6 +384,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Initialize Terraform")
 				apply.Status.Phase = "Error"
+				apply.Status.Action = ""
 				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			}
@@ -346,6 +404,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Plan Terraform")
 				apply.Status.Phase = "Error"
+				apply.Status.Action = ""
 				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			} else {
@@ -389,6 +448,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Apply Terraform")
 				apply.Status.Phase = "Error"
+				apply.Status.Action = ""
 				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			} else {
@@ -472,6 +532,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Get Commit ID")
 				apply.Status.Phase = "Error"
+				apply.Status.Action = ""
 				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			} else {
@@ -499,10 +560,11 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			stdout.Reset()
 			stderr.Reset()
 
-			cmd := "git config --global user.email $GIT_EMAIL;" +
-				"git config --global user.name $GIT_NAME;" +
-				"git config --global user.password $GIT_PW;" +
-				"git clone " + url + " " + dest
+			//cmd := "git config --global user.email $GIT_EMAIL;" +
+			//	"git config --global user.name $GIT_NAME;" +
+			//	"git config --global user.password $GIT_PW;" +
+			//	"git clone " + url + " " + dest
+			cmd := "git clone " + url + " " + dest
 			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 			fmt.Println(stdout.String())
@@ -511,8 +573,28 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Clone Git Repository")
 				apply.Status.Phase = "Error"
+				apply.Status.Action = ""
 				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
+			}
+
+			if apply.Spec.Branch != "" {
+				stdout.Reset()
+				stderr.Reset()
+
+				cmd = "cd " + dest + ";" + "git checkout -t origin/" + apply.Spec.Branch
+				err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+
+				fmt.Println(stdout.String())
+				fmt.Println(stderr.String())
+
+				if err != nil {
+					log.Error(err, "Failed to Checkout Git Branch")
+					apply.Status.Phase = "Error"
+					apply.Status.Action = ""
+					apply.Status.Log = err.Error()
+					return ctrl.Result{}, err
+				}
 			}
 
 			stdout.Reset()
@@ -538,6 +620,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Initialize Terraform")
 				apply.Status.Phase = "Error"
+				apply.Status.Action = ""
 				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			}
@@ -555,6 +638,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Initialize Terraform")
 				apply.Status.Phase = "Error"
+				apply.Status.Action = ""
 				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			}
@@ -573,6 +657,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Revert Commit")
 				apply.Status.Phase = "Error"
+				apply.Status.Action = ""
 				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			}
@@ -592,6 +677,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Recover Terraform State")
 				apply.Status.Phase = "Error"
+				apply.Status.Action = ""
 				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			}
@@ -611,6 +697,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			if err != nil {
 				log.Error(err, "Failed to Destroy Terraform")
 				apply.Status.Phase = "Error"
+				apply.Status.Action = ""
 				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			} else {
