@@ -52,6 +52,8 @@ spec:
               type: string
             url:
               type: string
+            variable:
+              type: string
             version:
               type: string
           type: object
@@ -59,6 +61,9 @@ spec:
           description: TFApplyClaimStatus defines the observed state of TFApplyClaim
           properties:
             action:
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                of cluster Important: Run "make" to regenerate code after modifying
+                this file'
               type: string
             apply:
               type: string
@@ -68,13 +73,6 @@ spec:
               type: string
             log:
               type: string
-            nodes:
-              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
-                of cluster Important: Run "make" to regenerate code after modifying
-                this file'
-              items:
-                type: string
-              type: array
             phase:
               type: string
             plans:

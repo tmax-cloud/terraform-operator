@@ -40,14 +40,14 @@ type TFApplyClaimSpec struct {
 	//Size    int32  `json:"size,omitempty"`
 	//Plan    bool   `json:"plan,omitempty"`
 	//Apply   bool   `json:"apply,omitempty"`
-	Destroy bool `json:"destroy,omitempty"`
+	Destroy  bool   `json:"destroy,omitempty"`
+	Variable string `json:"variable,omitempty"`
 }
 
 // TFApplyClaimStatus defines the observed state of TFApplyClaim
 type TFApplyClaimStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Nodes    []string `json:"nodes,omitempty"`
 	Action   string   `json:"action,omitempty"`
 	Phase    string   `json:"phase,omitempty"`
 	Plans    []Plan   `json:"plans,omitempty"`

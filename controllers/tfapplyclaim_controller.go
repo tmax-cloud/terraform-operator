@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -95,6 +96,33 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	//pw := apply.Spec.PW
 	branch := apply.Spec.Branch
 	//secret := apply.Spec.Secret
+
+	if apply.Spec.Variable != "" {
+		b := []byte(apply.Spec.Variable)
+		var f interface{}
+		json.Unmarshal(b, &f)
+		m := f.(map[string]interface{})
+
+		for k, v := range m {
+			switch vv := v.(type) {
+			case string:
+				fmt.Println(k, "is string", vv)
+			case float64:
+				fmt.Println(k, "is float64", vv)
+			//case []interface{}:
+			//	fmt.Println(k, "is an array:")
+			//	for i, u := range vv {
+			//		fmt.Println(i, u)
+			//	}
+			case bool:
+				fmt.Println(k, "is bool", vv)
+			default:
+				fmt.Println(k, "is of a type I don't know how to handle")
+			}
+		}
+		fmt.Println("Variable:")
+		fmt.Println(apply.Spec.Variable)
+	}
 	dest := "HCL_DIR"
 	//opt_terraform := "-chdir=/" + dest // only terrform 0.14+
 
@@ -303,6 +331,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 					return ctrl.Result{}, err
 				}
 			}
+
 			// 2. Terraform Initialization
 			//if apply.Status.Phase == "Cloned" {
 			stdout.Reset()
@@ -389,6 +418,26 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 				return ctrl.Result{}, err
 			}
 
+			if apply.Spec.Variable != "" {
+				stdout.Reset()
+				stderr.Reset()
+
+				cmd = "cat > terraform.tfvars.json << EOL\n" +
+					apply.Spec.Variable + "\nEOL"
+				err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+
+				fmt.Println(stdout.String())
+				fmt.Println(stderr.String())
+
+				if err != nil {
+					log.Error(err, "Failed to Create Variable Definitions (.tfvars) Files")
+					apply.Status.Phase = "Error"
+					apply.Status.Action = ""
+					apply.Status.Log = err.Error()
+					return ctrl.Result{}, err
+				}
+			}
+
 			stdout.Reset()
 			stderr.Reset()
 
@@ -433,6 +482,27 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		//}
 		//if (apply.Status.Phase == "Ready" || apply.Status.Phase == "Planned") && apply.Status.Action == "Apply" {
 		if (apply.Status.Phase == "Approved" || apply.Status.Phase == "Planned") && apply.Status.Action == "Apply" {
+
+			if apply.Spec.Variable != "" {
+				stdout.Reset()
+				stderr.Reset()
+
+				cmd := "cat > terraform.tfvars.json << EOL\n" +
+					apply.Spec.Variable + "\nEOL"
+				err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+
+				fmt.Println(stdout.String())
+				fmt.Println(stderr.String())
+
+				if err != nil {
+					log.Error(err, "Failed to Create Variable Definitions (.tfvars) Files")
+					apply.Status.Phase = "Error"
+					apply.Status.Action = ""
+					apply.Status.Log = err.Error()
+					return ctrl.Result{}, err
+				}
+			}
+
 			stdout.Reset()
 			stderr.Reset()
 
@@ -682,6 +752,26 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 				return ctrl.Result{}, err
 			}
 
+			if apply.Spec.Variable != "" {
+				stdout.Reset()
+				stderr.Reset()
+
+				cmd := "cat > terraform.tfvars.json << EOL\n" +
+					apply.Spec.Variable + "\nEOL"
+				err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+
+				fmt.Println(stdout.String())
+				fmt.Println(stderr.String())
+
+				if err != nil {
+					log.Error(err, "Failed to Create Variable Definitions (.tfvars) Files")
+					apply.Status.Phase = "Error"
+					apply.Status.Action = ""
+					apply.Status.Log = err.Error()
+					return ctrl.Result{}, err
+				}
+			}
+
 			stdout.Reset()
 			stderr.Reset()
 
@@ -839,15 +929,17 @@ func (r *TFApplyClaimReconciler) deploymentForApply(m *claimv1alpha1.TFApplyClai
 									},
 								},
 							},
-							{
-								Name: "GIT_EMAIL",
-								ValueFrom: &corev1.EnvVarSource{
-									SecretKeyRef: &corev1.SecretKeySelector{
-										LocalObjectReference: corev1.LocalObjectReference{Name: m.Spec.Secret},
-										Key:                  "email",
+							/*
+								{
+									Name: "GIT_EMAIL",
+									ValueFrom: &corev1.EnvVarSource{
+										SecretKeyRef: &corev1.SecretKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{Name: m.Spec.Secret},
+											Key:                  "email",
+										},
 									},
 								},
-							},
+							*/
 						},
 					}},
 				},
