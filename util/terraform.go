@@ -19,11 +19,9 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 )
 
-// ExecCmd exec command on specific pod and wait the command's output.
-func ExecCmdExample(client kubernetes.Interface, config *restclient.Config, podName string, podNamespace string,
+// ExecPodCmd exec command on specific pod and wait the command's output.
+func ExecPodCmd(client kubernetes.Interface, config *restclient.Config, podName string, podNamespace string,
 	command string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
-
-	fmt.Println("ExecCmdExample Start!!")
 
 	cmd := []string{
 		//"sh",
@@ -36,7 +34,6 @@ func ExecCmdExample(client kubernetes.Interface, config *restclient.Config, podN
 	//req := client.CoreV1().RESTClient().Post().Resource("pods").Name(podName).
 	//	Namespace("default").SubResource("exec")
 
-	fmt.Println("ExecCmdExample (1)")
 	option := &v1.PodExecOptions{
 		Command: cmd,
 		Stdin:   true,
@@ -45,19 +42,18 @@ func ExecCmdExample(client kubernetes.Interface, config *restclient.Config, podN
 		TTY:     true,
 	}
 	if stdin == nil {
-		fmt.Println("stdin is nil...")
 		option.Stdin = false
 	}
 	req.VersionedParams(
 		option,
 		scheme.ParameterCodec,
 	)
-	fmt.Println("ExecCmdExample (2)")
+
 	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
 	if err != nil {
 		return err
 	}
-	fmt.Println("ExecCmdExample (3)")
+
 	err = exec.Stream(remotecommand.StreamOptions{
 		Stdin:  stdin,
 		Stdout: stdout,
@@ -66,7 +62,6 @@ func ExecCmdExample(client kubernetes.Interface, config *restclient.Config, podN
 	if err != nil {
 		return err
 	}
-	fmt.Println("ExecCmdExample (4)")
 	return nil
 }
 

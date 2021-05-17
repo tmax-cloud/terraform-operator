@@ -28,19 +28,19 @@ type TFApplyClaimSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of TFApplyClaim. Edit TFApplyClaim_types.go to remove/update
-	Type    string `json:"type,omitempty"`
+	// Git Repoistory Type (Public, Private)
+	Type string `json:"type,omitempty"`
+	// Terraform CLI Version
 	Version string `json:"version,omitempty"`
-	URL     string `json:"url,omitempty"`
-	Branch  string `json:"branch,omitempty"`
-	//Email   string `json:"email,omitempty"`
-	//ID      string `json:"id,omitempty"`
-	//PW      string `json:"pw,omitempty"`
+	// Git URL (HCL Code)
+	URL string `json:"url,omitempty"`
+	// Git Branch
+	Branch string `json:"branch,omitempty"`
+	// Secret Name for Git Credential
 	Secret string `json:"secret,omitempty"`
-	//Size    int32  `json:"size,omitempty"`
-	//Plan    bool   `json:"plan,omitempty"`
-	//Apply   bool   `json:"apply,omitempty"`
-	Destroy  bool   `json:"destroy,omitempty"`
+	// Whether to perform "terraform destory"
+	Destroy bool `json:"destroy,omitempty"`
+	// Terraform Variable
 	Variable string `json:"variable,omitempty"`
 }
 
@@ -48,20 +48,34 @@ type TFApplyClaimSpec struct {
 type TFApplyClaimStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Action   string   `json:"action,omitempty"`
-	Phase    string   `json:"phase,omitempty"`
-	Plans    []Plan   `json:"plans,omitempty"`
-	Apply    string   `json:"apply,omitempty"`
-	Destroy  string   `json:"destroy,omitempty"`
-	State    string   `json:"state,omitempty"`
-	Commit   string   `json:"commit,omitempty"`
+
+	// Action defines the action that administrator apply
+	Action string `json:"action,omitempty"`
+	// Phase defines the current step for Terraform Claim
+	Phase string `json:"phase,omitempty"`
+	// Plans defines the information about "terraform plan"
+	Plans []Plan `json:"plans,omitempty"`
+	// Apply defines the information about "terraform apply"
+	Apply string `json:"apply,omitempty"`
+	// Destroy defines the information about "terraform destroy"
+	Destroy string `json:"destroy,omitempty"`
+	// State defines the contents for Terraform State File
+	State string `json:"state,omitempty"`
+	// Commit defines the latest commit id when apply or destroy
+	Commit string `json:"commit,omitempty"`
+	// Resource defines the count about added, updated, or deleted resources in Cloud Platform
 	Resource Resource `json:"resource,omitempty"`
-	Log      string   `json:"log,omitempty"`
+	// State defines the contents of stdout-stderr log for terraform cmd
+	Log string `json:"log,omitempty"`
 }
 
 type Plan struct {
+	// Last time that "terraform plan" performed.
 	LastExectionTime string `json:"lastexectiontime,omitempty"`
-	Log              string `json:"log,omitempty"`
+	// The latest Commid ID that "terraform plan" peformed in
+	Commit string `json:"commit,omitempty"`
+	// Stdout-StdErr Log about Plan Cmd
+	Log string `json:"log,omitempty"`
 }
 
 type Resource struct {

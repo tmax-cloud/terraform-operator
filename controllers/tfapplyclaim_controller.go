@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -52,7 +51,8 @@ type TFApplyClaimReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-var capacity int
+var capacity int = 5
+var commitID string
 
 // +kubebuilder:rbac:groups=claim.tmax.io,resources=tfapplyclaims,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=claim.tmax.io,resources=tfapplyclaims/status,verbs=get;update;patch
@@ -91,46 +91,13 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}
 
 	url := apply.Spec.URL
-	//email := apply.Spec.Email
-	//id := apply.Spec.ID
-	//pw := apply.Spec.PW
 	branch := apply.Spec.Branch
-	//secret := apply.Spec.Secret
 
-	if apply.Spec.Variable != "" {
-		b := []byte(apply.Spec.Variable)
-		var f interface{}
-		json.Unmarshal(b, &f)
-		m := f.(map[string]interface{})
-
-		for k, v := range m {
-			switch vv := v.(type) {
-			case string:
-				fmt.Println(k, "is string", vv)
-			case float64:
-				fmt.Println(k, "is float64", vv)
-			//case []interface{}:
-			//	fmt.Println(k, "is an array:")
-			//	for i, u := range vv {
-			//		fmt.Println(i, u)
-			//	}
-			case bool:
-				fmt.Println(k, "is bool", vv)
-			default:
-				fmt.Println(k, "is of a type I don't know how to handle")
-			}
-		}
-		fmt.Println("Variable:")
-		fmt.Println(apply.Spec.Variable)
-	}
 	dest := "HCL_DIR"
 	//opt_terraform := "-chdir=/" + dest // only terrform 0.14+
 
 	fmt.Println(repoType)
 	fmt.Println(url)
-	//fmt.Println(email)
-	//fmt.Println(id)
-	//fmt.Println(pw)
 	fmt.Println(branch)
 
 	helper, _ := patch.NewHelper(apply, r.Client)
@@ -155,28 +122,6 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		apply.Status.Phase = "Awaiting"
 		return ctrl.Result{Requeue: true}, nil
 	}
-	//if apply.Status.Phase == "Awaiting" && apply.Status.Action == "Approve" {
-	//	fmt.Println("test-log")
-	//	apply.Status.Phase = "Approving"
-	//	return ctrl.Result{Requeue: true}, nil
-	//}
-
-	/*
-		if apply.Status.Phase == "Awaiting" && apply.Status.Action == "Test" {
-			fmt.Println("5 seconds delay....")
-			time.Sleep(time.Second * 5)
-
-			tmp := apply.Status.Apply
-			test := "testdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsltestdkdkdiensldkfsnldkfnlweskjfsilefnlsekfnlsdknflsdkfnsleknsl"
-			tmp = tmp + test
-
-			fmt.Println("ADD SIZE" + strconv.Itoa(len(test)))
-			fmt.Println("Total SIZE" + strconv.Itoa(len(tmp)))
-
-			apply.Status.Apply = tmp
-			return ctrl.Result{Requeue: true}, nil
-		}
-	*/
 
 	if apply.Status.Phase != "Awaiting" || (apply.Status.Phase == "Awaiting" && apply.Status.Action == "Approve") {
 		// Check if the deployment already exists, if not create a new one
@@ -244,10 +189,6 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		fmt.Println(podNames)
 		fmt.Println("podNames[0]:" + podNames[0])
 
-		//var stdin os.Stdin
-		//var stdout os.Stdout
-		//var stderr os.Stderr
-
 		var stdout bytes.Buffer
 		var stderr bytes.Buffer
 
@@ -270,9 +211,6 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			return ctrl.Result{}, err
 		}
 
-		//err = util.ExecCmdExample(clientset, config, podNames[0], "ls", os.Stdin, os.Stdout, os.Stderr)
-		//err = util.ExecCmdExample(clientset, config, podNames[0], cmd, os.Stdin, os.Stdout, os.Stderr)
-
 		// Go Client - POD EXEC
 		if apply.Status.Phase == "Awaiting" && apply.Status.Action == "Approve" {
 
@@ -294,12 +232,8 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			stdout.Reset()
 			stderr.Reset()
 
-			//cmd := "git config --global user.email $GIT_EMAIL;" +
-			//	"git config --global user.name $GIT_NAME;" +
-			//	"git config --global user.password $GIT_PW;" +
-			//	"git clone " + url + " " + dest
 			cmd := "git clone " + url + " " + dest
-			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+			err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 			fmt.Println(stdout.String())
 			fmt.Println(stderr.String())
@@ -311,14 +245,13 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 				apply.Status.Log = err.Error()
 				return ctrl.Result{}, err
 			}
-			//}
 
 			if apply.Spec.Branch != "" {
 				stdout.Reset()
 				stderr.Reset()
 
 				cmd = "cd " + dest + ";" + "git checkout -t origin/" + apply.Spec.Branch
-				err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+				err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 				fmt.Println(stdout.String())
 				fmt.Println(stderr.String())
@@ -347,9 +280,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 				fmt.Sprintf("unzip -d /bin %s_%s_linux_amd64.zip;", name, version) +
 				"rm -rf /tmp/build;"
 
-			fmt.Println("CMD:" + cmd)
-
-			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+			err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 			fmt.Println(stdout.String())
 			fmt.Println(stderr.String())
@@ -367,7 +298,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 			//cmd := "terraform init" + " " + opt_terraform
 			cmd = "cd " + dest + ";" + "terraform init"
-			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+			err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 			fmt.Println(stdout.String())
 			fmt.Println(stderr.String())
@@ -387,11 +318,12 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		// 3. Terraform Plan
 		//if (apply.Status.Phase == "Ready" || apply.Status.Phase == "Planned") && apply.Status.Action == "Plan" {
 		if (apply.Status.Phase == "Approved" || apply.Status.Phase == "Planned") && apply.Status.Action == "Plan" {
+			// Git Pull
 			stdout.Reset()
 			stderr.Reset()
 
 			cmd := "cd " + dest + ";" + "git pull"
-			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+			err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 			fmt.Println(stdout.String())
 			fmt.Println(stderr.String())
@@ -404,8 +336,29 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 				return ctrl.Result{}, err
 			}
 
+			// Get Commit ID
+			stdout.Reset()
+			stderr.Reset()
+
+			cmd = "cd " + dest + ";" +
+				"git log --pretty=format:\"%H\" | head -n 1"
+
+			err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+
+			fmt.Println(stdout.String())
+
+			if err != nil {
+				log.Error(err, "Failed to Get Commit ID")
+				apply.Status.Phase = "Error"
+				apply.Status.Action = ""
+				apply.Status.Log = err.Error()
+				return ctrl.Result{}, err
+			} else {
+				commitID = strings.TrimRight(stdout.String(), "\r\n")
+			}
+
 			cmd = "cd " + dest + ";" + "terraform init"
-			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+			err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 			fmt.Println(stdout.String())
 			fmt.Println(stderr.String())
@@ -424,7 +377,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 				cmd = "cat > terraform.tfvars.json << EOL\n" +
 					apply.Spec.Variable + "\nEOL"
-				err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+				err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 				fmt.Println(stdout.String())
 				fmt.Println(stderr.String())
@@ -443,7 +396,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 			//cmd := "terraform init" + " " + opt_terraform
 			cmd = "cd " + dest + ";" + "terraform plan"
-			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+			err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 			fmt.Println(stdout.String())
 			fmt.Println(stderr.String())
@@ -460,28 +413,42 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 				apply.Status.Phase = "Planned"
 				// add plan to plans
 				var plan claimv1alpha1.Plan
-				plan.LastExectionTime = time.Now().String()
+				//plan.LastExectionTime = time.Now().String()
+				plan.LastExectionTime = time.Now().Format("2006-01-02 15:04:05") // yyyy-MM-dd HH:mm:ss
+				plan.Commit = commitID
 				plan.Log = stdoutStderr
-
-				capacity = 5
 
 				if len(apply.Status.Plans) == capacity {
 					apply.Status.Plans = dequeuePlan(apply.Status.Plans, capacity)
 				}
 				apply.Status.Plans = append([]claimv1alpha1.Plan{plan}, apply.Status.Plans...)
-				//apply.Status.Plans = append(apply.Status.Plans, plan)
-				//apply.Status.Plan = stdoutStderr
+
 			}
 		}
 
 		// 4. Terraform Apply
-		//if apply.Status.Phase == "awaiting" && apply.Spec.Apply == true {
-		//	apply.Status.Phase = "approved"
-		//	apply.Spec.Apply = false
-		//	return ctrl.Result{Requeue: true}, nil
-		//}
 		//if (apply.Status.Phase == "Ready" || apply.Status.Phase == "Planned") && apply.Status.Action == "Apply" {
 		if (apply.Status.Phase == "Approved" || apply.Status.Phase == "Planned") && apply.Status.Action == "Apply" {
+			// Get Commit ID
+			stdout.Reset()
+			stderr.Reset()
+
+			cmd := "cd " + dest + ";" +
+				"git log --pretty=format:\"%H\" | head -n 1"
+
+			err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+
+			fmt.Println(stdout.String())
+
+			if err != nil {
+				log.Error(err, "Failed to Get Commit ID")
+				apply.Status.Phase = "Error"
+				apply.Status.Action = ""
+				apply.Status.Log = err.Error()
+				return ctrl.Result{}, err
+			} else {
+				apply.Status.Commit = strings.TrimRight(stdout.String(), "\r\n")
+			}
 
 			if apply.Spec.Variable != "" {
 				stdout.Reset()
@@ -489,7 +456,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 				cmd := "cat > terraform.tfvars.json << EOL\n" +
 					apply.Spec.Variable + "\nEOL"
-				err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+				err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 				fmt.Println(stdout.String())
 				fmt.Println(stderr.String())
@@ -507,8 +474,8 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			stderr.Reset()
 
 			//cmd := "terraform init" + " " + opt_terraform
-			cmd := "cd " + dest + ";" + "terraform apply -auto-approve"
-			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+			cmd = "cd " + dest + ";" + "terraform apply -auto-approve"
+			err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 			fmt.Println(stdout.String())
 			fmt.Println(stderr.String())
@@ -540,32 +507,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 					destroyed, _ = strconv.Atoi(s[7])
 				}
 			}
-			/*
-				if added > 0 || changed > 0 || destroyed > 0 { // if Terrform State changed
-					stdout.Reset()
-					stderr.Reset()
 
-					//cmd := "terraform init" + " " + opt_terraform
-					cmd = "cd " + dest + ";" +
-						"git config --global user.email $GIT_EMAIL;" +
-						"git config --global user.name $GIT_NAME;" +
-						"git config --global user.password $GIT_PW;" +
-						"git add terraform.tfstate;" +
-						"git commit -m \"Commited by TFApplyClaim Opeator\";" +
-						"git push"
-
-					err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
-
-					fmt.Println(stdout.String())
-					fmt.Println(stderr.String())
-
-					if err != nil {
-						log.Error(err, "Failed to Push tfstate file")
-						apply.Status.Phase = "Error"
-						return ctrl.Result{}, err
-					}
-				}
-			*/
 			stdout.Reset()
 			stderr.Reset()
 
@@ -573,7 +515,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			cmd = "cd " + dest + ";" +
 				"cat terraform.tfstate"
 
-			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+			err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 			fmt.Println(stdout.String())
 
@@ -586,27 +528,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 				apply.Status.Resource.Added = added
 				apply.Status.Resource.Updated = changed
 				apply.Status.Resource.Deleted = destroyed
-			}
 
-			// Get Commit ID
-			stdout.Reset()
-			stderr.Reset()
-
-			cmd = "cd " + dest + ";" +
-				"git log --pretty=format:\"%H\" | head -n 1"
-
-			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
-
-			fmt.Println(stdout.String())
-
-			if err != nil {
-				log.Error(err, "Failed to Get Commit ID")
-				apply.Status.Phase = "Error"
-				apply.Status.Action = ""
-				apply.Status.Log = err.Error()
-				return ctrl.Result{}, err
-			} else {
-				apply.Status.Commit = strings.TrimRight(stdout.String(), "\r\n")
 				apply.Status.Phase = "Applied"
 			}
 		}
@@ -630,12 +552,8 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			stdout.Reset()
 			stderr.Reset()
 
-			//cmd := "git config --global user.email $GIT_EMAIL;" +
-			//	"git config --global user.name $GIT_NAME;" +
-			//	"git config --global user.password $GIT_PW;" +
-			//	"git clone " + url + " " + dest
 			cmd := "git clone " + url + " " + dest
-			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+			err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 			fmt.Println(stdout.String())
 			fmt.Println(stderr.String())
@@ -653,7 +571,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 				stderr.Reset()
 
 				cmd = "cd " + dest + ";" + "git checkout -t origin/" + apply.Spec.Branch
-				err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+				err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 				fmt.Println(stdout.String())
 				fmt.Println(stderr.String())
@@ -680,9 +598,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 				fmt.Sprintf("unzip -d /bin %s_%s_linux_amd64.zip;", name, version) +
 				"rm -rf /tmp/build;"
 
-			fmt.Println("CMD:" + cmd)
-
-			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+			err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 			fmt.Println(stdout.String())
 			fmt.Println(stderr.String())
@@ -700,7 +616,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 			//cmd := "terraform init" + " " + opt_terraform
 			cmd = "cd " + dest + ";" + "terraform init"
-			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+			err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 			fmt.Println(stdout.String())
 			fmt.Println(stderr.String())
@@ -720,7 +636,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			cmd = "cd " + dest + ";" +
 				"git reset " + apply.Status.Commit
 
-			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+			err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 			fmt.Println(stdout.String())
 
@@ -740,7 +656,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 				"cat > terraform.tfstate << EOL\n" +
 				apply.Status.State + "EOL"
 
-			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+			err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 			fmt.Println(stdout.String())
 
@@ -758,7 +674,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 				cmd := "cat > terraform.tfvars.json << EOL\n" +
 					apply.Spec.Variable + "\nEOL"
-				err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+				err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 				fmt.Println(stdout.String())
 				fmt.Println(stderr.String())
@@ -777,7 +693,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 			//cmd := "terraform init" + " " + opt_terraform
 			cmd = "cd " + dest + ";" + "terraform destroy -auto-approve"
-			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+			err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 			fmt.Println(stdout.String())
 			fmt.Println(stderr.String())
@@ -810,32 +726,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 					destroyed, _ = strconv.Atoi(s[3])
 				}
 			}
-			/*
-				if added > 0 || changed > 0 || destroyed > 0 { // if Terrform State changed
-					stdout.Reset()
-					stderr.Reset()
 
-					//cmd := "terraform init" + " " + opt_terraform
-					cmd = "cd " + dest + ";" +
-						"git config --global user.email $GIT_EMAIL;" +
-						"git config --global user.name $GIT_NAME;" +
-						"git config --global user.password $GIT_PW;" +
-						"git add terraform.tfstate;" +
-						"git commit -m \"Commited by TFApplyClaim Opeator\";" +
-						"git push"
-
-					err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
-
-					fmt.Println(stdout.String())
-					fmt.Println(stderr.String())
-
-					if err != nil {
-						log.Error(err, "Failed to Push tfstate file")
-						apply.Status.Phase = "error"
-						return ctrl.Result{}, err
-					}
-				}
-			*/
 			stdout.Reset()
 			stderr.Reset()
 
@@ -843,7 +734,7 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			cmd = "cd " + dest + ";" +
 				"cat terraform.tfstate"
 
-			err = util.ExecCmdExample(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
+			err = util.ExecPodCmd(clientset, config, podNames[0], apply.Namespace, cmd, nil, &stdout, &stderr)
 
 			fmt.Println(stdout.String())
 
@@ -863,20 +754,9 @@ func (r *TFApplyClaimReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 			}
 
 		}
-
-		//if err != nil {
-		//	log.Error(err, "Failed to pull Repository")
-		//	apply.Status.Phase = "error"
-		//} else {
-		//	apply.Status.Phase = "success"
-		//}
-
-		// Create Terraform Working Directory
-		//terraDir := util.HCL_DIR + "/" + providerName
 	}
 
 	apply.Status.Action = ""
-	fmt.Println("**END OF RECONCILE LOOP***")
 	return ctrl.Result{RequeueAfter: time.Second * 60}, nil // Reconcile loop rescheduled after 60 seconds
 
 }
@@ -929,17 +809,6 @@ func (r *TFApplyClaimReconciler) deploymentForApply(m *claimv1alpha1.TFApplyClai
 									},
 								},
 							},
-							/*
-								{
-									Name: "GIT_EMAIL",
-									ValueFrom: &corev1.EnvVarSource{
-										SecretKeyRef: &corev1.SecretKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{Name: m.Spec.Secret},
-											Key:                  "email",
-										},
-									},
-								},
-							*/
 						},
 					}},
 				},

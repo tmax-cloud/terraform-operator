@@ -37,54 +37,68 @@ spec:
           description: TFApplyClaimSpec defines the desired state of TFApplyClaim
           properties:
             branch:
+              description: Git Branch
               type: string
             destroy:
-              description: Size    int32  `json:"size,omitempty"` Plan    bool   `json:"plan,omitempty"`
-                Apply   bool   `json:"apply,omitempty"`
+              description: Whether to perform "terraform destory"
               type: boolean
             secret:
-              description: Email   string `json:"email,omitempty"` ID      string
-                `json:"id,omitempty"` PW      string `json:"pw,omitempty"`
+              description: Secret Name for Git Credential
               type: string
             type:
-              description: Foo is an example field of TFApplyClaim. Edit TFApplyClaim_types.go
-                to remove/update
+              description: Git Repoistory Type (Public, Private)
               type: string
             url:
+              description: Git URL (HCL Code)
               type: string
             variable:
+              description: Terraform Variable
               type: string
             version:
+              description: Terraform CLI Version
               type: string
           type: object
         status:
           description: TFApplyClaimStatus defines the observed state of TFApplyClaim
           properties:
             action:
-              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
-                of cluster Important: Run "make" to regenerate code after modifying
-                this file'
+              description: Action defines the action that administrator apply
               type: string
             apply:
+              description: Apply defines the information about "terraform apply"
               type: string
             commit:
+              description: Commit defines the latest commit id when apply or destroy
               type: string
             destroy:
+              description: Destroy defines the information about "terraform destroy"
               type: string
             log:
+              description: State defines the contents of stdout-stderr log for terraform
+                cmd
               type: string
             phase:
+              description: Phase defines the current step for Terraform Claim
               type: string
             plans:
+              description: Plans defines the information about "terraform plan"
               items:
                 properties:
+                  commit:
+                    description: The latest Commid ID that "terraform plan" peformed
+                      in
+                    type: string
                   lastexectiontime:
+                    description: Last time that "terraform plan" performed.
                     type: string
                   log:
+                    description: Stdout-StdErr Log about Plan Cmd
                     type: string
                 type: object
               type: array
             resource:
+              description: Resource defines the count about added, updated, or deleted
+                resources in Cloud Platform
               properties:
                 added:
                   type: integer
@@ -94,6 +108,7 @@ spec:
                   type: integer
               type: object
             state:
+              description: State defines the contents for Terraform State File
               type: string
           type: object
       type: object
